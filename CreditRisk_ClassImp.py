@@ -77,6 +77,64 @@ class DataLoader:
 
         #df = df.groupby(group_by).agg(agg_dict)
         return df
+    
+    def encode_categorical_columns(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
+        """
+        Encode categorical columns:
+        - data: DataFrame to encode
+        - return: encoded DataFrame
+        """
+        if table_name=='person_2':
+
+            #################################
+            ###  relatedpersons_role_762T ###
+            #################################
+            # Method 1 with replace using dictionary
+            #roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
+            #data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None))
+
+            # Method 2 with cast to Enum
+            roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
+            data = data.with_columns(pl.col("relatedpersons_role_762T").cast(pl.Enum(roles_ordered)).to_physical().alias("relatedpersons_role_encoded_762T"))
+
+        return data        
+    
+    def aggregate_depth_2(self, data: pl.DataFrame, table_name: str, smart_features: bool):
+        """
+        Aggregate the data by depth 2:
+        - data: DataFrame to aggregate
+        - table_name: name of the table to aggregate
+        - smart_features: flag to enable smart features
+        - return: aggregated DataFrame
+        """
+
+        # Create a new DataFrame to store the aggregated results
+        #result = pl.DataFrame()
+
+        if table_name=='person_2' and smart_features:
+            # Encode categorical columns
+            data = self.encode_categorical_columns(data, table_name)
+
+            
+            data = data.group_by(['case_id','num_group1']).agg(
+                    # Number of non-null related person roles indicated
+                    pl.when(pl.col("relatedpersons_role_762T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_related_persons"),
+                    # The most influential role
+                    pl.col("relatedpersons_role_encoded_762T").max().alias("most_influential_role"),
+                    
+                )
+            
+        elif table_name=='person_2' and not smart_features:
+            # Create columns with 0/1 for each role in relatedpersons_role_762T
+            roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
+            for role in roles_ordered:
+                data = data.with_columns(
+                    pl.col("relatedpersons_role_762T").eq(role).cast(pl.Int8).alias(f"relatedpersons_role_{role}_762T")
+                )
+            
+
+        return data
+
 
     def load_data(self):
 
@@ -126,7 +184,5 @@ class DataLoader:
         #     'credit_bureau_a_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_a_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
         #     'credit_bureau_b_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_b_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
         # }
-
-
 
         return data_store
