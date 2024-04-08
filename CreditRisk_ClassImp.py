@@ -121,7 +121,6 @@ class DataLoader:
                     pl.when(pl.col("relatedpersons_role_762T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_related_persons"),
                     # The most influential role
                     pl.col("relatedpersons_role_encoded_762T").max().alias("most_influential_role"),
-                    
                 )
             
         elif table_name=='person_2' and not smart_features:
