@@ -89,13 +89,23 @@ class DataLoader:
             #################################
             ###  relatedpersons_role_762T ###
             #################################
-            # Method 1 with replace using dictionary
-            #roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
-            #data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None))
-
-            # Method 2 with cast to Enum
+            # Cast to Enum, otherwise use replace method
             roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
-            data = data.with_columns(pl.col("relatedpersons_role_762T").cast(pl.Enum(roles_ordered)).to_physical().alias("relatedpersons_role_encoded_762T"))
+            roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
+            # Check if all unique values are in roles_ordered, if not use replace method
+            unique_values = data["relatedpersons_role_762T"].drop_nulls().unique().to_list()
+            if all(val in roles_ordered for val in unique_values):
+                try:   # Enum encoding
+                    data = data.with_columns(pl.col("relatedpersons_role_762T").cast(pl.Enum(roles_ordered)).to_physical().alias("relatedpersons_role_encoded_762T"))
+                except:
+                    print("Error with relatedpersons_role_762T encoding using Enum. Switching to replace ...")
+                    data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None).alias("relatedpersons_role_encoded_762T"))
+            else:
+                print("Not all unique values are in roles_ordered. Switching to replace ...")
+                data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None).alias("relatedpersons_role_encoded_762T"))
+            
+
+            
 
         return data        
     
@@ -130,10 +140,32 @@ class DataLoader:
                 data = data.with_columns(
                     pl.col("relatedpersons_role_762T").eq(role).cast(pl.Int8).alias(f"relatedpersons_role_{role}_762T")
                 )
-            
+
+            # Dropping unneeded columns
+            data = data.drop(["relatedpersons_role_762T"])
+
+            # Aggregating by case_id and num_group1
+            data = data.group_by(['case_id', 'num_group1']).agg(
+                # Agrregate all "relatedpersons_role_{role}_762T" columns for each role in roles_ordered as a sum
+                *[pl.col(f"relatedpersons_role_{role}_762T").sum().cast(pl.Int8).alias(f"num_related_persons_{role}") for role in roles_ordered],
+            )
+
+
 
         return data
 
+    def add_target(self, data: pl.DataFrame, train_basetable: pl.DataFrame):
+        """
+        Add the target column to the DataFrame:
+        - data: DataFrame to add the target column to
+        - train_basetable: DataFrame to get the target column from
+        - return: DataFrame with the target column added
+        """
+        data = data.join(
+            train_basetable.select(['case_id', 'WEEK_NUM' , 'target']), on='case_id', how='left'
+        )
+        
+        return data
 
     def load_data(self):
 
