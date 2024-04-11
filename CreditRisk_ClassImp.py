@@ -4,6 +4,8 @@ import polars as pl
 import numpy as np
 import pandas as pd
 
+import predata
+
 dataPath = "/kaggle/input/home-credit-credit-risk-model-stability/"
 
 
@@ -78,6 +80,27 @@ class DataLoader:
         #df = df.groupby(group_by).agg(agg_dict)
         return df
     
+    def cat_to_int_encode(self, data: pl.DataFrame, column_name: str, new_column_name: str, encoding_dict: dict) -> pl.DataFrame:
+        """
+        Convert a categorical column to integer inplace.
+        """
+        # create list of dict keys:
+        roles_ordered = list(encoding_dict.keys())
+
+        # Check if all unique values are in roles_ordered, if not use replace method
+        unique_values = data[column_name].drop_nulls().unique().to_list()
+        if all(val in roles_ordered for val in unique_values):
+            try:   # Enum encoding
+                data = data.with_columns(pl.col(column_name).cast(pl.Enum(roles_ordered)).to_physical().alias(new_column_name))
+            except:
+                print(f"Error with {column_name} encoding using Enum. Switching to replace ...")
+                data = data.with_columns(pl.col(column_name).replace(encoding_dict, default=None).alias(new_column_name))
+        else:
+            print("Not all unique values are in roles_ordered. Switching to replace ...")
+            data = data.with_columns(pl.col(column_name).replace(encoding_dict, default=None).alias(new_column_name))
+        
+        return data
+    
     def encode_categorical_columns(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
         """
         Encode categorical columns:
@@ -90,21 +113,20 @@ class DataLoader:
             ###  relatedpersons_role_762T ###
             #################################
             # Cast to Enum, otherwise use replace method
-            roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
-            roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
-            # Check if all unique values are in roles_ordered, if not use replace method
-            unique_values = data["relatedpersons_role_762T"].drop_nulls().unique().to_list()
-            if all(val in roles_ordered for val in unique_values):
-                try:   # Enum encoding
-                    data = data.with_columns(pl.col("relatedpersons_role_762T").cast(pl.Enum(roles_ordered)).to_physical().alias("relatedpersons_role_encoded_762T"))
-                except:
-                    print("Error with relatedpersons_role_762T encoding using Enum. Switching to replace ...")
-                    data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None).alias("relatedpersons_role_encoded_762T"))
-            else:
-                print("Not all unique values are in roles_ordered. Switching to replace ...")
-                data = data.with_columns(pl.col("relatedpersons_role_762T").replace(roles_encoding, default=None).alias("relatedpersons_role_encoded_762T"))
-            
+            # roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
+            # Load predefined dictionary
+            roles_encoding = predata.relatedpersons_role_762T_encoding
+            data = self.cat_to_int_encode(data, "relatedpersons_role_762T", "relatedpersons_role_encoded", roles_encoding)
 
+            #################################
+            ###    addres_district_368M   ###
+            #################################
+            # Chain an addition of several new columns
+            data = data.with_columns(
+                pl.col("addres_district_368M").replace(predata.addres_district_368M_to_mean_target, default=None).alias("addres_district_mean_target"),
+                pl.col("addres_district_368M").replace(predata.addres_district_368M_to_frequency, default=None).alias("addres_district_frequency")
+            ).drop(["addres_district_368M"])
+            
             
 
         return data        
