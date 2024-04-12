@@ -107,6 +107,15 @@ class DataLoader:
         - data: DataFrame to encode
         - return: encoded DataFrame
         """
+
+        def norm_frequency(frequency_dict: dict) -> dict:
+            """
+            Normalize frequency dictionary by dividing each value by the sum of all values.
+            """
+            total_sum = sum(frequency_dict.values())
+            return {key: value / total_sum for key, value in frequency_dict.items()}
+
+
         if table_name=='person_2':
 
             #################################
@@ -122,12 +131,23 @@ class DataLoader:
             ###    addres_district_368M   ###
             #################################
             # Chain an addition of several new columns
+            # TODO: mormalize frequency by norm_frequency(predata.relatedpersons_role_762T_mean_target)
+            # TODO: add another fill_null('None') in the end of chain?
             data = data.with_columns(
-                pl.col("addres_district_368M").replace(predata.addres_district_368M_to_mean_target, default=None).alias("addres_district_mean_target"),
-                pl.col("addres_district_368M").replace(predata.addres_district_368M_to_frequency, default=None).alias("addres_district_frequency")
-            ).drop(["addres_district_368M"])
+                pl.col("relatedpersons_role_762T").fill_null('None').replace(predata.relatedpersons_role_762T_mean_target, default=None).alias("relatedpersons_role_mean_target"),
+                pl.col("relatedpersons_role_762T").fill_null('None').replace(predata.relatedpersons_role_762T_frequency, default=None).alias("relatedpersons_role_frequency"),
+
+                pl.col("addres_district_368M").replace(predata.addres_district_368M_mean_target, default=None).alias("addres_district_mean_target"),
+                pl.col("addres_district_368M").replace(predata.addres_district_368M_frequency, default=None).alias("addres_district_frequency"),
+
+                pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_mean_target, default=None).alias("addres_role_mean_target"),
+                pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_frequency, default=None).alias("addres_role_frequency"),
+            ).drop(["addres_district_368M", "relatedpersons_role_762T", "addres_role_871L"])
             
-            
+            # Convert dictionary elements from counts to frequency by normalizing each element by the sum of elements
+            relatedpersons_role_762T_to_frequency = predata.relatedpersons_role_762T_to_frequency
+            for key in relatedpersons_role_762T_to_frequency:
+                relatedpersons_role_762T_to_frequency[key] /= sum(relatedpersons_role_762T_to_frequency.values())
 
         return data        
     

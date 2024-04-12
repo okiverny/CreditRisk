@@ -13,7 +13,17 @@ relatedpersons_role_762T_encoding = roles_encoding = {
     "SPOUSE": 9
 }
 
-addres_district_368M_to_mean_target = {
+relatedpersons_role_762T_mean_target = {'FRIEND': 0.04213111656905347, 'PARENT': 0.03479504289799809, 'NEIGHBOR': 0.03324808184143223, 'CHILD': 0.020971867007672635,
+                                        'SPOUSE': 0.03523035230352303, 'GRAND_PARENT': 0.026415094339622643, 'OTHER': 0.02980769230769231, 'COLLEAGUE': 0.044620253164556964,
+                                        'SIBLING': 0.03607103218645949, 'OTHER_RELATIVE': 0.033810980518435035,
+                                        'None': 0.031534962878185455
+                                        }
+
+relatedpersons_role_762T_frequency = {'SIBLING': 5406, 'NEIGHBOR': 782, 'FRIEND': 5293, 'OTHER_RELATIVE': 6211, 'CHILD': 1955, 'OTHER': 2080, 'GRAND_PARENT': 265,
+                                      'PARENT': 2098, 'SPOUSE': 1476, 'COLLEAGUE': 3160, 'None': 0
+                                      }
+
+addres_district_368M_mean_target = {
     'P144_138_111': 0.0, 'P164_101_191': 0.07692307692307693, 'P115_114_156': 0.0,
     'P33_56_77': 0.0, 'P46_28_179': 0.05084745762711865, 'P37_85_23': 0.0, 'P82_20_167': 0.14285714285714285,
     'P36_156_177': 0.0, 'P161_100_188': 0.0497335701598579, 'P151_14_173': 0.0, 'P25_86_54': 0.16666666666666666, 'P48_124_50': 0.05434782608695652,
@@ -104,7 +114,7 @@ addres_district_368M_to_mean_target = {
     'a55475b1': 0.03145737621235324
 }
 
-addres_district_368M_to_frequency = {
+addres_district_368M_frequency = {
     'P144_138_111': 2, 'P164_101_191': 13, 'P115_114_156': 16, 'P33_56_77': 41, 'P46_28_179': 295, 'P37_85_23': 11, 'P82_20_167': 7, 'P36_156_177': 2,
     'P161_100_188': 563, 'P151_14_173': 13, 'P25_86_54': 12, 'P48_124_50': 92, 'P67_146_167': 16, 'P76_107_47': 44, 'P43_146_65': 59, 'P144_113_37': 6,
     'P38_125_143': 3, 'P49_148_153': 8, 'P71_82_108': 2, 'P174_72_83': 200, 'P113_20_172': 2, 'P70_84_186': 90, 'P28_97_101': 5, 'P202_5_164': 27,
@@ -167,3 +177,10 @@ addres_district_368M_to_frequency = {
     'P171_112_31': 184, 'P107_131_181': 1058, 'P70_15_61': 104, 'P169_52_174': 395, 'P137_73_81': 234, 'P159_46_172': 167, 'P37_84_33': 1249,
     'a55475b1': 1582872
 }
+
+addres_role_871L_mean_target = {'CONTACT': 0.03581531161602336, 'MIGRATED_LIVING': 0.0, 'PERMANENT': 0.03500455300230328, 'MIGRATED_REGISTRATION': 0.0,
+                                'TEMPORARY': 0.03211455581815654, 'MIGRATED_OTHER': 0.0, 'MIGRATED_WORK': 0.0, 'REGISTERED': 0.037910699241786014, 'None': 0.03146529621713282
+                                }
+addres_role_871L_frequency = {'CONTACT': 21918, 'MIGRATED_LIVING': 13, 'PERMANENT': 37338, 'MIGRATED_REGISTRATION': 19, 'TEMPORARY': 7193,
+                              'MIGRATED_OTHER': 1, 'MIGRATED_WORK': 5, 'REGISTERED': 1187, 'None': 0
+                              }
