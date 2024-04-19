@@ -178,6 +178,38 @@ class DataLoader:
 
             drop_columns = ["conts_type_509L", "credacc_cards_status_52L", "cacccardblochreas_147M"]
 
+        if table_name=='credit_bureau_a_2':
+
+            collater_typofvalofguarant_unique = ['9a0c095e','8fd95e4b','06fb9ba8','3cbe86ba']
+
+            # Adding new columns
+            data = data.with_columns(
+                pl.col("collater_typofvalofguarant_298M").replace(predata.collater_typofvalofguarant_298M_mean_target, default=None).alias("collater_typofvalofguarant_298M_mean_target"),
+                pl.col("collater_typofvalofguarant_298M").replace(predata.collater_typofvalofguarant_298M_frequency, default=None).alias("collater_typofvalofguarant_298M_frequency"),
+
+                # Add columns as one-hot-encoded values of collater_typofvalofguarant_298M
+                *[pl.col("collater_typofvalofguarant_298M").eq(role).cast(pl.Int8).alias(f"collater_typofvalofguarant_298M_{role}") for role in collater_typofvalofguarant_unique],
+
+                pl.col("collater_typofvalofguarant_407M").replace(predata.collater_typofvalofguarant_407M_mean_target, default=None).alias("collater_typofvalofguarant_407M_mean_target"),
+                pl.col("collater_typofvalofguarant_407M").replace(predata.collater_typofvalofguarant_407M_frequency, default=None).alias("collater_typofvalofguarant_407M_frequency"),
+
+                # Add columns as one-hot-encoded values of collater_typofvalofguarant_407M
+                *[pl.col("collater_typofvalofguarant_407M").eq(role).cast(pl.Int8).alias(f"collater_typofvalofguarant_407M_{role}") for role in collater_typofvalofguarant_unique],
+
+                pl.col("collaterals_typeofguarante_359M").replace(predata.collaterals_typeofguarante_359M_mean_target, default=None).alias("collaterals_typeofguarante_359M_mean_target"),
+                pl.col("collaterals_typeofguarante_359M").replace(predata.collaterals_typeofguarante_359M_frequency, default=None).alias("collaterals_typeofguarante_359M_frequency"),
+
+                pl.col("collaterals_typeofguarante_669M").replace(predata.collaterals_typeofguarante_669M_mean_target, default=None).alias("collaterals_typeofguarante_669M_mean_target"),
+                pl.col("collaterals_typeofguarante_669M").replace(predata.collaterals_typeofguarante_669M_frequency, default=None).alias("collaterals_typeofguarante_669M_frequency"),
+
+                pl.col("subjectroles_name_541M").replace(predata.subjectroles_name_541M_mean_target, default=None).alias("subjectroles_name_541M_mean_target"),
+                pl.col("subjectroles_name_541M").replace(predata.subjectroles_name_541M_frequency, default=None).alias("subjectroles_name_541M_frequency"),
+
+                pl.col("subjectroles_name_838M").replace(predata.subjectroles_name_838M_mean_target, default=None).alias("subjectroles_name_838M_mean_target"),
+                pl.col("subjectroles_name_838M").replace(predata.subjectroles_name_838M_frequency, default=None).alias("subjectroles_name_838M_frequency"),
+            )
+
+            drop_columns = ["collater_typofvalofguarant_298M", "collater_typofvalofguarant_407M", "collaterals_typeofguarante_359M", "collaterals_typeofguarante_669M"]
 
         return data        
     
@@ -238,6 +270,86 @@ class DataLoader:
                     # Various frequency columns
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
                 )
+            
+        elif table_name=='credit_bureau_a_2' and smart_features:
+            # Encode categorical columns
+            data = self.encode_categorical_columns(data, table_name)
+
+            collater_typofvalofguarant_unique = ['9a0c095e','8fd95e4b','06fb9ba8','3cbe86ba']
+
+            data = data.group_by(['case_id', 'num_group1']).agg(
+                    # Number of non-null collater_typofvalofguarant_298M
+                    pl.when(pl.col("collater_typofvalofguarant_298M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_typofvalofguarant_298M"),
+                    # Sum of one-hot-encoded columns
+                    *[pl.col(f"collater_typofvalofguarant_298M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
+
+                    # Number of non-null collater_typofvalofguarant_407M
+                    pl.when(pl.col("collater_typofvalofguarant_407M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_typofvalofguarant_407M"),
+                    # Sum of one-hot-encoded columns
+                    *[pl.col(f"collater_typofvalofguarant_407M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
+
+                    # Number of non-null collater_valueofguarantee_1124L
+                    pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_valueofguarantee_1124L"),
+                    # Total sum and mean of collater_valueofguarantee_1124L
+                    pl.col("collater_valueofguarantee_1124L").sum().alias("collater_valueofguarantee_1124L_sum"),
+                    pl.col("collater_valueofguarantee_1124L").mean().alias("collater_valueofguarantee_1124L_mean"),
+
+                    # Number of non-null collater_valueofguarantee_876L
+                    pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_valueofguarantee_876L"),
+                    # Total sum and mean of collater_valueofguarantee_876L
+                    pl.col("collater_valueofguarantee_876L").sum().alias("collater_valueofguarantee_876L_sum"),
+                    pl.col("collater_valueofguarantee_876L").mean().alias("collater_valueofguarantee_876L_mean"),
+
+                    # Number of non-null collaterals_typeofguarante_359M
+                    pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collaterals_typeofguarante_359M"),
+                    # Number of non-null collaterals_typeofguarante_669M
+                    pl.when(pl.col("collaterals_typeofguarante_669M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collaterals_typeofguarante_669M"),
+
+                    # Days past due of the payment columns (pmts_dpd_1073P)
+                    pl.when(
+                            (pl.col("pmts_dpd_1073P").is_not_null()) & (pl.col("pmts_dpd_1073P").gt(0.0))
+                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_1073P"),
+                    pl.col("pmts_dpd_1073P").sum().alias("pmts_dpd_1073P_sum"),
+                    pl.col("pmts_dpd_1073P").mean().alias("pmts_dpd_1073P_mean"),
+
+                    # Days past due of the payment columns (pmts_dpd_303P)
+                    pl.when(
+                            (pl.col("pmts_dpd_303P").is_not_null()) & (pl.col("pmts_dpd_303P").gt(0.0))
+                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_303P"),
+                    pl.col("pmts_dpd_303P").sum().alias("pmts_dpd_303P_sum"),
+                    pl.col("pmts_dpd_303P").mean().alias("pmts_dpd_303P_mean"),
+
+                    # Overdue payment
+                    pl.when(
+                            (pl.col("pmts_overdue_1140A").is_not_null()) & (pl.col("pmts_overdue_1140A").gt(0.0))
+                        ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_overdue_1140A"),
+                    pl.col("pmts_overdue_1140A").sum().alias("pmts_overdue_1140A_sum"),
+                    pl.col("pmts_overdue_1140A").mean().alias("pmts_overdue_1140A_mean"),
+                    pl.col("pmts_overdue_1140A").filter(
+                            (pl.col("pmts_overdue_1140A").is_not_null()) & (pl.col("pmts_overdue_1140A").gt(0.0))
+                        ).last().alias("pmts_overdue_1140A_last"),
+
+                    pl.when(
+                            (pl.col("pmts_overdue_1152A").is_not_null()) & (pl.col("pmts_overdue_1152A").gt(0.0))
+                        ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_overdue_1152A"),
+                    pl.col("pmts_overdue_1152A").sum().alias("pmts_overdue_1152A_sum"),
+                    pl.col("pmts_overdue_1152A").mean().alias("pmts_overdue_1152A_mean"),
+                    pl.col("pmts_overdue_1152A").filter(
+                            (pl.col("pmts_overdue_1152A").is_not_null()) & (pl.col("pmts_overdue_1152A").gt(0.0))
+                        ).last().alias("pmts_overdue_1152A_last"),
+
+                    # Number of non-null subjectroles_name_541M
+                    pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_subjectroles_name_541M"),
+                                                                                                                 
+
+                    # Various mean_target columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                    # Various frequency columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+
+            )
+
+            # Dropped completely: pmts_month_158T, pmts_month_706T, pmts_year_1139T, pmts_year_507T
             
         elif table_name=='person_2' and not smart_features:
             # Create columns with 0/1 for each role in relatedpersons_role_762T
