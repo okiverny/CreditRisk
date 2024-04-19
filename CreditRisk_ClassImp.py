@@ -127,9 +127,6 @@ class DataLoader:
             roles_encoding = predata.relatedpersons_role_762T_encoding
             data = self.cat_to_int_encode(data, "relatedpersons_role_762T", "relatedpersons_role_encoded", roles_encoding)
 
-            #################################
-            ###    addres_district_368M   ###
-            #################################
             # Chain an addition of several new columns
             # TODO: mormalize frequency by norm_frequency(predata.relatedpersons_role_762T_mean_target)
             # TODO: add another fill_null('None') in the end of chain?
@@ -142,12 +139,45 @@ class DataLoader:
 
                 pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_mean_target, default=None).alias("addres_role_mean_target"),
                 pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_frequency, default=None).alias("addres_role_frequency"),
-            ).drop(["addres_district_368M", "relatedpersons_role_762T", "addres_role_871L"])
-            
-            # Convert dictionary elements from counts to frequency by normalizing each element by the sum of elements
-            relatedpersons_role_762T_to_frequency = predata.relatedpersons_role_762T_to_frequency
-            for key in relatedpersons_role_762T_to_frequency:
-                relatedpersons_role_762T_to_frequency[key] /= sum(relatedpersons_role_762T_to_frequency.values())
+
+                pl.col("addres_zip_823M").replace(predata.addres_zip_823M_mean_target, default=None).alias("addres_zip_mean_target"),
+                pl.col("addres_zip_823M").replace(predata.addres_zip_823M_frequency, default=None).alias("addres_zip_frequency"),
+
+                pl.col("conts_role_79M").replace(predata.conts_role_79M_mean_target, default=None).alias("conts_role_mean_target"),
+                pl.col("conts_role_79M").replace(predata.conts_role_79M_frequency, default=None).alias("conts_role_frequency"),
+
+                pl.col("empls_economicalst_849M").replace(predata.empls_economicalst_849M_mean_target, default=None).alias("empls_economicalst_mean_target"),
+                pl.col("empls_economicalst_849M").replace(predata.empls_economicalst_849M_frequency, default=None).alias("empls_economicalst_frequency"),
+
+            )#.drop(["addres_district_368M", "relatedpersons_role_762T", "addres_role_871L", "addres_zip_823M", "conts_role_79M", "empls_economicalst_849M",
+             # "empls_employer_name_740M"])
+
+             # Dropped completely: empls_employer_name_740M, 
+        
+        if table_name=='applprev_2':
+            contact_type_encoding = predata.conts_type_509L_encoding
+            data = self.cat_to_int_encode(data, "conts_type_509L", "conts_type_encoded", contact_type_encoding)
+
+            credacc_cards_status_encoding = predata.credacc_cards_status_52L_encoding
+            data = self.cat_to_int_encode(data, "credacc_cards_status_52L", "credacc_cards_status_encoded", credacc_cards_status_encoding)
+
+            cacccardblochreas_147M_encoding = predata.cacccardblochreas_147M_encoding
+            data = self.cat_to_int_encode(data, "cacccardblochreas_147M", "cacccardblochreas_encoded", cacccardblochreas_147M_encoding)
+
+            # Adding new columns
+            data = data.with_columns(
+                pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_mean_target, default=None).alias("conts_type_mean_target"),
+                pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_frequency, default=None).alias("conts_type_frequency"),
+
+                pl.col("credacc_cards_status_52L").fill_null('None').replace(predata.credacc_cards_status_52L_mean_target, default=None).alias("credacc_cards_status_mean_target"),
+                pl.col("credacc_cards_status_52L").fill_null('None').replace(predata.credacc_cards_status_52L_frequency, default=None).alias("credacc_cards_status_frequency"),
+
+                pl.col("cacccardblochreas_147M").fill_null('None').replace(predata.cacccardblochreas_147M_mean_target, default=None).alias("cacccardblochreas_147M_mean_target"),
+                pl.col("cacccardblochreas_147M").fill_null('None').replace(predata.cacccardblochreas_147M_frequency, default=None).alias("cacccardblochreas_147M_frequency"),
+            )
+
+            drop_columns = ["conts_type_509L", "credacc_cards_status_52L", "cacccardblochreas_147M"]
+
 
         return data        
     
@@ -172,7 +202,41 @@ class DataLoader:
                     # Number of non-null related person roles indicated
                     pl.when(pl.col("relatedpersons_role_762T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_related_persons"),
                     # The most influential role
-                    pl.col("relatedpersons_role_encoded_762T").max().alias("most_influential_role"),
+                    pl.col("relatedpersons_role_encoded").max().alias("most_influential_role"),
+                    # Start date of employment
+                    pl.col("empls_employedfrom_796D").first().alias('empls_employedfrom_796D'),
+                    # Various mean_target columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                    # Various frequency columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+                )
+            
+        elif table_name=='applprev_2' and smart_features:
+            # Encode categorical columns
+            data = self.encode_categorical_columns(data, table_name)
+
+            data = data.group_by(['case_id','num_group1']).agg(
+                    # Number of non-null contact roles indicated
+                    pl.when(pl.col("conts_type_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_contacts"),
+                    # The most influential contact
+                    pl.col("conts_type_encoded").max().alias("most_influential_contact"),
+
+                    # Number of non-null credacc_cards_status
+                    # TODO: check .replace("a55475b1", None) addition
+                    pl.when(pl.col("credacc_cards_status_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_credacc_cards_status"),
+                    # The most influential credacc_cards_status
+                    pl.col("credacc_cards_status_encoded").max().alias("most_influential_credacc_cards_status"),
+
+                    # Number of credit card blocks
+                    # TODO: check .replace("a55475b1", None) addition
+                    pl.when(pl.col("cacccardblochreas_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_credit_card_blocks"),
+                    # The most influential credit card block
+                    pl.col("cacccardblochreas_encoded").max().alias("most_influential_credit_card_block"),
+
+                    # Various mean_target columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                    # Various frequency columns
+                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
                 )
             
         elif table_name=='person_2' and not smart_features:
