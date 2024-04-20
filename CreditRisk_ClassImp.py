@@ -211,6 +211,26 @@ class DataLoader:
 
             drop_columns = ["collater_typofvalofguarant_298M", "collater_typofvalofguarant_407M", "collaterals_typeofguarante_359M", "collaterals_typeofguarante_669M"]
 
+        if table_name=='credit_bureau_b_2':
+
+            data = data.with_columns(
+                # Fill null with 0 for pmts_dpdvalue_108P column
+                pl.col("pmts_dpdvalue_108P").fill_null(0).alias("pmts_dpdvalue_108P"),
+            )
+
+            def count_intervals(df):
+                # Assuming 'df' is sorted by date or some time order
+                return df.with_column(
+                    pl.col("pmts_dpdvalue_108P").is_not_null()
+                    .and_(pl.col("pmts_dpdvalue_108P").gt(0))
+                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).is_not_null())
+                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).gt(0))
+                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).ne(pl.col("pmts_dpdvalue_108P")))
+                    .cumsum()
+                    .alias("intervals")
+                    )
+
+
         return data        
     
     def aggregate_depth_2(self, data: pl.DataFrame, table_name: str, smart_features: bool):
@@ -350,18 +370,13 @@ class DataLoader:
                     (pl.col("pmts_year_507T").cast(pl.Float64).max() - pl.col("pmts_year_507T").cast(pl.Float64).min()).alias("pmts_year_507T_duration"),
                     # Number of non-null pmts_year_507T
                     pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_year_1139T"),
-                    # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
+                    # First and last years of payments of the current credit (pmts_year_1139T) contract, avoiding null, and their difference
                     pl.col("pmts_year_1139T").cast(pl.Float64).min().alias("pmts_year_1139T_first"),
                     pl.col("pmts_year_1139T").cast(pl.Float64).max().alias("pmts_year_1139T_last"),
                     (pl.col("pmts_year_1139T").cast(pl.Float64).max() - pl.col("pmts_year_1139T").cast(pl.Float64).min()).alias("pmts_year_1139T_duration"),
 
                     # Number of years without credit
                     (pl.col("pmts_year_1139T").cast(pl.Float64).min() - pl.col("pmts_year_507T").cast(pl.Float64).max()).alias("pmts_year_1139T_507T_diff"),
-
-
-
-
-                    #(pl.col("pmts_year_1139T") - pl.col("pmts_year_507T")).alias("pmts_year_diff_1139T_507T"),
 
                     # Various mean_target columns
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
@@ -373,6 +388,43 @@ class DataLoader:
             # Dropped completely: pmts_month_158T, pmts_month_706T
             # Implemented: pmts_year_1139T, pmts_year_507T
             
+        elif table_name=='credit_bureau_b_2' and smart_features:
+            # Fill null for pmts_dpdvalue_108P (observed)
+            data = self.encode_categorical_columns(data, table_name)
+
+            data = data.group_by(['case_id', 'num_group1']).agg(
+                # Number of non-null pmts_date_1107D (it has type pl.Date)
+                pl.when(pl.col("pmts_date_1107D").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_date_1107D"),
+                # First and last years of payments of the active contract pmts_date_1107D as well as duration
+                pl.col("pmts_date_1107D").min().dt.year().alias("pmts_date_1107D_first"),
+                pl.col("pmts_date_1107D").max().dt.year().alias("pmts_date_1107D_last"),
+                (pl.col("pmts_date_1107D").max().dt.year() - pl.col("pmts_date_1107D").min().dt.year()).alias("pmts_date_1107D_duration"),
+                (pl.col("pmts_date_1107D").max() - pl.col("pmts_date_1107D").min()).dt.total_days().alias("pmts_date_1107D_duration_days"),
+
+                # pmts_dpdvalue_108P values (TODO: is this money or days?)
+                pl.when(
+                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
+                    ).then(1).otherwise(0).sum().cast(pl.Int32).alias("num_pmts_dpdvalue_108P"),
+                pl.col("pmts_dpdvalue_108P").max().alias("pmts_dpdvalue_108P_max"),
+                pl.col("pmts_dpdvalue_108P").last().alias("pmts_dpdvalue_108P_last"),
+                pl.col("pmts_dpdvalue_108P").filter(
+                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
+                    ).arg_max().fill_null(-1).alias("pmts_dpdvalue_108P_maxidx"),
+                # TODO: check here which positive trend is better
+                #(pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last()).alias("pmts_dpdvalue_108P_pos"),
+                ((pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last())/pl.col("pmts_dpdvalue_108P").max()).fill_nan(1.0).alias("pmts_dpdvalue_108P_pos"),
+
+                # pmts_pmtsoverdue_635A values
+                pl.col("pmts_pmtsoverdue_635A").max().alias("pmts_pmtsoverdue_635A_max"),
+                pl.col("pmts_pmtsoverdue_635A").last().alias("pmts_pmtsoverdue_635A_last"),
+                pl.col("pmts_pmtsoverdue_635A").filter(
+                        (pl.col("pmts_pmtsoverdue_635A").is_not_null()) & (pl.col("pmts_pmtsoverdue_635A").gt(0.0))
+                    ).arg_max().fill_null(-1).alias("pmts_pmtsoverdue_635A_maxidx"),
+                ((pl.col("pmts_pmtsoverdue_635A").max() - pl.col("pmts_pmtsoverdue_635A").last())/pl.col("pmts_pmtsoverdue_635A").max()).fill_nan(1.0).alias("pmts_pmtsoverdue_635A_pos"),
+        
+
+            )
+
         elif table_name=='person_2' and not smart_features:
             # Create columns with 0/1 for each role in relatedpersons_role_762T
             roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
