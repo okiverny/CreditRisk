@@ -340,7 +340,28 @@ class DataLoader:
 
                     # Number of non-null subjectroles_name_541M
                     pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_subjectroles_name_541M"),
-                                                                                                                 
+
+                    # Years of payments of closed credit (pmts_year_507T) contract and the current contract (pmts_year_1139T)
+                    # Number of non-null pmts_year_507T
+                    pl.when(pl.col("pmts_year_507T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_year_507T"),
+                    # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
+                    pl.col("pmts_year_507T").cast(pl.Float64).min().alias("pmts_year_507T_first"),
+                    pl.col("pmts_year_507T").cast(pl.Float64).max().alias("pmts_year_507T_last"),
+                    (pl.col("pmts_year_507T").cast(pl.Float64).max() - pl.col("pmts_year_507T").cast(pl.Float64).min()).alias("pmts_year_507T_duration"),
+                    # Number of non-null pmts_year_507T
+                    pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_year_1139T"),
+                    # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
+                    pl.col("pmts_year_1139T").cast(pl.Float64).min().alias("pmts_year_1139T_first"),
+                    pl.col("pmts_year_1139T").cast(pl.Float64).max().alias("pmts_year_1139T_last"),
+                    (pl.col("pmts_year_1139T").cast(pl.Float64).max() - pl.col("pmts_year_1139T").cast(pl.Float64).min()).alias("pmts_year_1139T_duration"),
+
+                    # Number of years without credit
+                    (pl.col("pmts_year_1139T").cast(pl.Float64).min() - pl.col("pmts_year_507T").cast(pl.Float64).max()).alias("pmts_year_1139T_507T_diff"),
+
+
+
+
+                    #(pl.col("pmts_year_1139T") - pl.col("pmts_year_507T")).alias("pmts_year_diff_1139T_507T"),
 
                     # Various mean_target columns
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
@@ -349,7 +370,8 @@ class DataLoader:
 
             )
 
-            # Dropped completely: pmts_month_158T, pmts_month_706T, pmts_year_1139T, pmts_year_507T
+            # Dropped completely: pmts_month_158T, pmts_month_706T
+            # Implemented: pmts_year_1139T, pmts_year_507T
             
         elif table_name=='person_2' and not smart_features:
             # Create columns with 0/1 for each role in relatedpersons_role_762T
