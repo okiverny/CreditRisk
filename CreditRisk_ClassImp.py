@@ -5,11 +5,10 @@ import numpy as np
 import pandas as pd
 
 import predata
+import gc
 
-dataPath = "/kaggle/input/home-credit-credit-risk-model-stability/"
 
-
-class DataLoader:
+class CreditRiskProcessing:
     """
     Load data from parquet files.
     """
@@ -222,19 +221,18 @@ class DataLoader:
 
         return data
     
-    def aggregate_depth_2(self, data: pl.DataFrame, table_name: str, smart_features: bool):
+    def aggregate_depth_2(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
         """
         Aggregate the data by depth 2:
         - data: DataFrame to aggregate
         - table_name: name of the table to aggregate
-        - smart_features: flag to enable smart features
         - return: aggregated DataFrame
         """
 
         # Create a new DataFrame to store the aggregated results
         #result = pl.DataFrame()
 
-        if table_name=='person_2' and smart_features:
+        if table_name=='person_2':
             # Encode categorical columns
             data = self.encode_categorical_columns(data, table_name)
 
@@ -252,7 +250,7 @@ class DataLoader:
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
                 )
             
-        elif table_name=='applprev_2' and smart_features:
+        elif table_name=='applprev_2':
             # Encode categorical columns
             data = self.encode_categorical_columns(data, table_name)
 
@@ -280,7 +278,7 @@ class DataLoader:
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
                 )
             
-        elif table_name=='credit_bureau_a_2' and smart_features:
+        elif table_name=='credit_bureau_a_2':
             # Encode categorical columns
             data = self.encode_categorical_columns(data, table_name)
 
@@ -377,7 +375,7 @@ class DataLoader:
             # Dropped completely: pmts_month_158T, pmts_month_706T
             # Implemented: pmts_year_1139T, pmts_year_507T
             
-        elif table_name=='credit_bureau_b_2' and smart_features:
+        elif table_name=='credit_bureau_b_2':
             # Fill null for pmts_dpdvalue_108P (observed)
             data = self.encode_categorical_columns(data, table_name)
 
@@ -414,28 +412,28 @@ class DataLoader:
 
             )
 
-        elif table_name=='person_2' and not smart_features:
-            # Create columns with 0/1 for each role in relatedpersons_role_762T
-            roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
-            for role in roles_ordered:
-                data = data.with_columns(
-                    pl.col("relatedpersons_role_762T").eq(role).cast(pl.Int8).alias(f"relatedpersons_role_{role}_762T")
-                )
+        # elif table_name=='person_2' and not smart_features:
+        #     # Create columns with 0/1 for each role in relatedpersons_role_762T
+        #     roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
+        #     for role in roles_ordered:
+        #         data = data.with_columns(
+        #             pl.col("relatedpersons_role_762T").eq(role).cast(pl.Int8).alias(f"relatedpersons_role_{role}_762T")
+        #         )
 
-            # Dropping unneeded columns
-            data = data.drop(["relatedpersons_role_762T"])
+        #     # Dropping unneeded columns
+        #     data = data.drop(["relatedpersons_role_762T"])
 
-            # Aggregating by case_id and num_group1
-            data = data.group_by(['case_id', 'num_group1']).agg(
-                # Agrregate all "relatedpersons_role_{role}_762T" columns for each role in roles_ordered as a sum
-                *[pl.col(f"relatedpersons_role_{role}_762T").sum().cast(pl.Int8).alias(f"num_related_persons_{role}") for role in roles_ordered],
-            )
+        #     # Aggregating by case_id and num_group1
+        #     data = data.group_by(['case_id', 'num_group1']).agg(
+        #         # Agrregate all "relatedpersons_role_{role}_762T" columns for each role in roles_ordered as a sum
+        #         *[pl.col(f"relatedpersons_role_{role}_762T").sum().cast(pl.Int8).alias(f"num_related_persons_{role}") for role in roles_ordered],
+        #     )
 
 
 
         return data
 
-    def add_target(self, data: pl.DataFrame, train_basetable: pl.DataFrame):
+    def add_target(self, data: pl.DataFrame, train_basetable: pl.DataFrame) -> pl.DataFrame:
         """
         Add the target column to the DataFrame:
         - data: DataFrame to add the target column to
@@ -448,7 +446,7 @@ class DataLoader:
         
         return data
 
-    def load_data(self):
+    def load_data_and_process(self) -> dict:
 
         # List of data tables to be loaded
         data_list = ['base', 'static_0', 'static_cb_0',
@@ -458,13 +456,6 @@ class DataLoader:
         if not self.complete:
             data_list = data_list[:4]
 
-        # Relations between data tables for concatination of depth 1 and 2 after aggregation of depth 2
-        data_relations_by_depth = {
-            'applprev_1': 'applprev_2',
-            'person_1': 'person_2',
-            'credit_bureau_a_1': 'credit_bureau_a_2',
-            'credit_bureau_b_1': 'credit_bureau_b_2'
-        }
 
         data_store = {}
         for data in data_list:
@@ -497,4 +488,70 @@ class DataLoader:
         #     'credit_bureau_b_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_b_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
         # }
 
+        # Step 1: Processing depth_2 tables
+        for data_name in data_store:
+            # check if data name ends with "_2"
+            if data_name.endswith('_2'):
+                print(f'Processing the table: {data_name}')
+                # Apply aggregate_depth_2 function with arguments to the data
+                data_store[data_name] = data_store[data_name].pipe(self.aggregate_depth_2, data_name)
+
+
+
+        # Relations between data tables for concatination of depth 1 and 2 after aggregation of depth 2
+        data_relations_by_depth = {
+            'applprev_1': 'applprev_2',
+            'person_1': 'person_2',
+            'credit_bureau_a_1': 'credit_bureau_a_2',
+            'credit_bureau_b_1': 'credit_bureau_b_2'
+        }
+
+        # Step 2: join the corresponding depth 1 and 2 tables
+        for data_name in data_store:
+            # check if data name ends with "_1"
+            if data_name.endswith('_1'):
+                # get the corresponding depth 2 table name from data_relations_by_depth
+                depth_2_table_name = data_relations_by_depth.get(data_name)
+                if depth_2_table_name:
+                    print(f'Joining the table: {data_name} with the table: {depth_2_table_name}')
+                    # Join the depth 1 and depth 2 tables
+                    data_store[data_name] = data_store[data_name].join(
+                        data_store[depth_2_table_name], on=["case_id", "num_group1"], how='outer'
+                    )
+                    # Save memory
+                    del data_store[depth_2_table_name]
+                    gc.collect()
+
+        # Step 3: Processing depth_1 tables
+        for data_name in data_store:
+            # check if data name ends with "_1"
+            if data_name.endswith('_1'):
+                print(f'Processing the table: {data_name}')
+                # Apply aggregate_depth_1 function with arguments to the data
+                data_store[data_name] = data_store[data_name].pipe(self.aggregate_depth_1, data_name)
+
+
+                
+        
+
         return data_store
+
+# Main function here
+if __name__ == "__main__":
+
+    dataPath = "/kaggle/input/home-credit-credit-risk-model-stability/"
+
+    # Create a CreditRisk object
+    cr = CreditRiskProcessing(data_path=dataPath, data_type="train", complete=True)
+
+    # Load the data
+    data_store = cr.load_data_and_process()
+
+    # Create the features
+    features = cr.create_features(data_store)
+
+    # Add the target column
+    features = cr.add_target(features, data_store['base'])
+
+    # Save the features to a parquet file
+    features.write_parquet('features.parquet')
