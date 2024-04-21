@@ -216,22 +216,11 @@ class DataLoader:
             data = data.with_columns(
                 # Fill null with 0 for pmts_dpdvalue_108P column
                 pl.col("pmts_dpdvalue_108P").fill_null(0).alias("pmts_dpdvalue_108P"),
+                pl.col("pmts_pmtsoverdue_635A").fill_null(0).alias("pmts_pmtsoverdue_635A"),
             )
 
-            def count_intervals(df):
-                # Assuming 'df' is sorted by date or some time order
-                return df.with_column(
-                    pl.col("pmts_dpdvalue_108P").is_not_null()
-                    .and_(pl.col("pmts_dpdvalue_108P").gt(0))
-                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).is_not_null())
-                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).gt(0))
-                    .and_(pl.col("pmts_dpdvalue_108P").shift(-1).ne(pl.col("pmts_dpdvalue_108P")))
-                    .cumsum()
-                    .alias("intervals")
-                    )
 
-
-        return data        
+        return data
     
     def aggregate_depth_2(self, data: pl.DataFrame, table_name: str, smart_features: bool):
         """
