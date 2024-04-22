@@ -218,6 +218,13 @@ class CreditRiskProcessing:
                 pl.col("pmts_pmtsoverdue_635A").fill_null(0).alias("pmts_pmtsoverdue_635A"),
             )
 
+        if table_name=='credit_bureau_b_1':
+            data = data.with_columns(
+                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_mean_target, default=None).alias("periodicityofpmts_997L_mean_target"),
+                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_frequency, default=None).alias("periodicityofpmts_997L_frequency"),
+                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_interval, default=None).alias("periodicityofpmts_997L_interval"),
+            )
+
 
         return data
     
@@ -429,7 +436,153 @@ class CreditRiskProcessing:
         #         *[pl.col(f"relatedpersons_role_{role}_762T").sum().cast(pl.Int8).alias(f"num_related_persons_{role}") for role in roles_ordered],
         #     )
 
+        return data
+    
+    def aggregate_depth_1(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
+        """
+        Aggregate data by case_id
+        """
+        if table_name=='credit_bureau_b_1':
 
+            # Columns to comute Summary Statistics (max, sum, mean, median)
+            summary_columns = ['amount_1115A', 'totalamount_503A', 'totalamount_881A', 'overdueamountmax_950A',
+                               'interesteffectiverate_369L','interestrateyearly_538L', 'pmtdaysoverdue_1135P', 'pmtnumpending_403L']
+            mean_columns = ['installmentamount_644A', 'installmentamount_833A', 'residualamount_1093A', 'residualamount_3940956A','instlamount_892A','debtvalue_227A','debtpastduevalue_732A',
+                            'dpd_550P','dpd_733P','dpdmax_851P', 'residualamount_127A','numberofinstls_810L']
+            sum_columns = ['installmentamount_833A', 'residualamount_3940956A', 'credlmt_1052A','credlmt_228A','credlmt_3940954A','credquantity_1099L',
+                           'credquantity_984L','instlamount_892A','debtvalue_227A','debtpastduevalue_732A', 'residualamount_127A','numberofinstls_810L']
+            max_columns = ['credquantity_1099L', 'credquantity_984L', 'maxdebtpduevalodued_3940955A', 'dpd_550P','dpd_733P','dpdmax_851P']
+            min_columns = ['maxdebtpduevalodued_3940955A']
+            year_columns = ['overdueamountmaxdateyear_432T']
+
+            data = data.group_by('case_id').agg(
+
+                # Number of non-null entries in summary columns
+                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in summary_columns],
+
+                # Create new features from summary columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+
+                #*[pl.col(col).filter(
+                #        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                #        ).median().fill_null(0.0).alias(col+"_median") for col in summary_columns],
+
+                # Create mean values for columns in mean_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+
+                # Create columns with sum values from sum_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+
+                # Create columns with max values from max_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+
+                # Create columns with min values from min_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+
+
+                # A binary feature indicating whether a column has at least one missing value (null)
+                (pl.col("amount_1115A").is_null()).any().alias("amount_1115A_null"),
+                (pl.col("totalamount_881A").is_null()).any().alias("totalamount_881A_null"),
+                
+                # Credit Utilization Ratio: ratio of amount_1115A to totalamount_503A 
+                (pl.col("amount_1115A") / pl.col("totalamount_503A")).fill_null(0.0).replace(float("inf"),0.0).max().alias("amount_1115A_totalamount_503A_ratio_max"),
+                (pl.col("amount_1115A").fill_null(0.0).max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("amount_1115A_credlmt_3940954A_ratio"),
+                (pl.col("amount_1115A").fill_null(0.0) / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("amount_1115A_credlmt_3940954A_ratio_max"),
+                (pl.col("amount_1115A").fill_null(0.0).max() / pl.col("credlmt_1052A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("amount_1115A_credlmt_1052A_ratio"),
+                (pl.col("amount_1115A").fill_null(0.0) / pl.col("credlmt_1052A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("amount_1115A_credlmt_1052A_ratio_max"),
+        
+
+                # Compute the absolute difference between totalamount_503A and amount_1115A.
+                (pl.col("totalamount_503A").fill_null(0.0) - pl.col("amount_1115A").fill_null(0.0)).abs().max().alias("totalamount_503A_max_diff"),
+                # Difference in Credit Limits
+                (pl.col("credlmt_3940954A").fill_null(0.0) - pl.col("credlmt_228A").fill_null(0.0)).max().alias("credlmt_3940954A_credlmt_228A_diff_max"),
+                (pl.col("credlmt_3940954A").fill_null(0.0) - pl.col("credlmt_1052A").fill_null(0.0)).max().alias("credlmt_3940954A_credlmt_1052A_diff_max"),
+                (pl.col("credlmt_3940954A").fill_null(0.0).max() - pl.col("credlmt_228A").fill_null(0.0).max()).alias("credlmt_3940954A_credlmt_228A_diff"),
+                (pl.col("credlmt_3940954A").fill_null(0.0).max() - pl.col("credlmt_1052A").fill_null(0.0).max()).alias("credlmt_3940954A_credlmt_1052A_diff"),
+
+                # TODO: Log Transformations: If the credit amounts have a wide range, consider taking the logarithm to normalize the distribution.
+
+                # Max value of totalamount_503A over totalamount_881A
+                (pl.col("totalamount_503A").fill_null(0.0).max() / pl.col("totalamount_881A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("totalamount_503A_881A"),
+
+                ## Columns with years
+                #*[pl.col(col).cast(pl.Float64).max().fill_null(0.0).alias(col+"_last") for col in year_columns],
+                #*[(pl.col(col).cast(pl.Float64).max() - pl.col(col).cast(pl.Float64).min()).fill_null(0.0).alias(col+"_duration") for col in year_columns],
+
+                # Overdue-to-Installment Ratio
+                (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("installmentamount_833A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_installmentamount_833A_ratio"),
+                (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("instlamount_892A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_instlamount_892A_ratio"),
+                
+                
+
+                # Residual-to-Credit Limit Ratio
+                (pl.col("residualamount_3940956A").fill_null(0.0).max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("residualamount_3940956A_credlmt_3940954A_ratio"),
+                (pl.col("residualamount_3940956A").fill_null(0.0) / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("residualamount_3940956A_credlmt_3940954A_ratio_max"),
+        
+                # Create a binary feature indicating whether the maximum debt occurred recently (e.g., within the last month or quarter) based on maxdebtpduevalodued_3940955A
+                (pl.col("maxdebtpduevalodued_3940955A").filter(
+                        (pl.col("maxdebtpduevalodued_3940955A").is_not_null()) & (pl.col("maxdebtpduevalodued_3940955A").gt(0.0))
+                    ).min() < 120.0).fill_null(False).alias("maxdebtpduevalodued_3940955A_isrecent"),
+
+                # TODO Debt-to-Income Ratio: Divide the outstanding debt amount (debtvalue_227A) by the client’s income (if available). This ratio provides insights into a client’s ability to manage debt relative to their income.
+
+                # Past Due Ratio: Calculate the ratio of unpaid debt (debtpastduevalue_732A) to the total outstanding debt (debtvalue_227A). High past due ratios may indicate higher credit risk.
+                (pl.col("debtpastduevalue_732A").fill_null(0.0).max() / pl.col("debtvalue_227A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("debtpastduevalue_732A_debtvalue_227A_ratio"),
+                (pl.col("debtpastduevalue_732A").fill_null(0.0) / pl.col("debtvalue_227A").fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).max().alias("debtpastduevalue_732A_debtvalue_227A_ratio_max"),
+
+
+                # Number of non-null and greater than 0.0 values in dpd_550P, dpd_733P and dpdmax_851P columns
+                pl.when( (pl.col("dpd_550P").is_not_null()) & (pl.col("dpd_550P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpd_550P"),
+                pl.when( (pl.col("dpd_733P").is_not_null()) & (pl.col("dpd_733P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpd_733P"),
+                pl.when( (pl.col("dpdmax_851P").is_not_null()) & (pl.col("dpdmax_851P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpdmax_851P"),
+                
+
+                # Columns for month (dpdmaxdatemonth_804T) and years (dpdmaxdateyear_742T)
+                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max() - 
+                    pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).min()).dt.total_days().fill_null(0.0).alias("dpdmaxdate_duration"),
+                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.year().fill_null(0.0).alias("dpdmaxdateyear_742T_last"),
+                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.month().fill_null(0.0).alias("dpdmaxdatemonth_804T_last"),
+
+                # Columns for month (overdueamountmaxdatemonth_494T) and years (overdueamountmaxdateyear_432T)
+                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max() - 
+                    pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).min()).dt.total_days().fill_null(0.0).alias("overdueamountmaxdat_duration"),
+                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.year().fill_null(0.0).alias("overdueamountmaxdateyear_432T_last"),
+                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.month().fill_null(0.0).alias("overdueamountmaxdatemonth_494T_last"),
+
+                # Durations: last update - contract date
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().min().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_min'),
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().max().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_max'),
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().mean().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_mean'),
+                # Duration:  contract maturity date - last update
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().min().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_min'),
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().max().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_max'),
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().mean().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_mean'),
+
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+                # Interval columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_interval")],
+            )
 
         return data
 
