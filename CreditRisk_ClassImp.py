@@ -251,6 +251,7 @@ class CreditRiskProcessing:
 
                 pl.col("subjectrole_43M").replace(predata.subjectrole_43M_mean_target, default=None).alias("subjectrole_43M_mean_target"),
                 pl.col("subjectrole_43M").replace(predata.subjectrole_43M_frequency, default=None).alias("subjectrole_43M_frequency"),
+
             )
 
 
@@ -485,6 +486,14 @@ class CreditRiskProcessing:
             min_columns = ['maxdebtpduevalodued_3940955A']
             year_columns = ['overdueamountmaxdateyear_432T']
 
+            # Similar lists for depth_2 table
+            summary_columns += ["pmts_dpdvalue_108P_max","pmts_dpdvalue_108P_last","pmts_pmtsoverdue_635A_max","pmts_pmtsoverdue_635A_last"]
+            mean_columns += ["pmts_date_1107D_duration","pmts_date_1107D_duration_days","pmts_dpdvalue_108P_pos","pmts_pmtsoverdue_635A_pos"]
+            sum_columns += ["num_pmts_date_1107D","num_pmts_dpdvalue_108P"]
+            max_columns += ["pmts_date_1107D_duration","pmts_date_1107D_duration_days","pmts_dpdvalue_108P_maxidx","pmts_pmtsoverdue_635A_maxidx"]
+            min_columns += []
+
+            # Aggregating by case_id
             data = data.group_by('case_id').agg(
 
                 # Number of non-null entries in summary columns
@@ -561,8 +570,6 @@ class CreditRiskProcessing:
                 (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("installmentamount_833A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_installmentamount_833A_ratio"),
                 (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("instlamount_892A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_instlamount_892A_ratio"),
                 
-                
-
                 # Residual-to-Credit Limit Ratio
                 (pl.col("residualamount_3940956A").fill_null(0.0).max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("residualamount_3940956A_credlmt_3940954A_ratio"),
                 (pl.col("residualamount_3940956A").fill_null(0.0) / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("residualamount_3940956A_credlmt_3940954A_ratio_max"),
@@ -612,6 +619,16 @@ class CreditRiskProcessing:
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
                 # Interval columns
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_interval")],
+
+                #####
+                ##### Columns from credit_bureau_b_2
+                #####
+
+                (pl.col("pmts_date_1107D_last").max().dt.year() - pl.col("pmts_date_1107D_first").min().dt.year()).alias("pmts_date_1107D_duration"),
+                (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).dt.total_days().alias("pmts_date_1107D_duration_days"),
+                pl.col("pmts_date_1107D_first").min().dt.year().alias("pmts_date_1107D_first"),
+                pl.col("pmts_date_1107D_last").max().dt.year().alias("pmts_date_1107D_last"),
+
             )
 
         return data
