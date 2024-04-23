@@ -731,9 +731,13 @@ class CreditRiskProcessing:
                 data_store[data_name] = data_store[data_name].pipe(self.aggregate_depth_1, data_name)
 
 
+
+        # Step 4: join 'base' and 'credit_bureau_b_1' tables by "case_id"
+        data_store['base'] = data_store['base'].join(
+            data_store['credit_bureau_b_1'], on="case_id", how='left'
+        )
                 
         
-
         return data_store
 
 # Main function here
