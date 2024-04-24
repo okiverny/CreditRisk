@@ -24,7 +24,7 @@ class CreditRiskProcessing:
 
         # To-Do: check more efficient typings and add protections (cast give error if out of range)
         data_type_mappings = {
-            'L': pl.Int64,
+            #'L': pl.String,
             'A': pl.Float64,
             'D': pl.Date,
             'M': pl.String,
@@ -255,6 +255,47 @@ class CreditRiskProcessing:
             )
 
 
+        return data
+    
+    def aggregate_credit_bureau_b_2(self, data: pl.DataFrame) -> pl.DataFrame:
+        """
+        Aggregate the data by credit_bureau_b_2:
+        - data: DataFrame to aggregate
+        - return: aggregated DataFrame
+        """
+
+        data = data.group_by(['case_id', 'num_group1']).agg(
+                # Number of non-null pmts_date_1107D (it has type pl.Date)
+                pl.when(pl.col("pmts_date_1107D").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_date_1107D"),
+                # First and last years of payments of the active contract pmts_date_1107D as well as duration
+                pl.col("pmts_date_1107D").min().dt.year().alias("pmts_date_1107D_first"),
+                pl.col("pmts_date_1107D").max().dt.year().alias("pmts_date_1107D_last"),
+                (pl.col("pmts_date_1107D").max().dt.year() - pl.col("pmts_date_1107D").min().dt.year()).alias("pmts_date_1107D_duration"),
+                (pl.col("pmts_date_1107D").max() - pl.col("pmts_date_1107D").min()).dt.total_days().alias("pmts_date_1107D_duration_days"),
+
+                # pmts_dpdvalue_108P values (TODO: is this money or days?)
+                pl.when(
+                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
+                    ).then(1).otherwise(0).sum().cast(pl.Int32).alias("num_pmts_dpdvalue_108P"),
+                pl.col("pmts_dpdvalue_108P").max().alias("pmts_dpdvalue_108P_max"),
+                pl.col("pmts_dpdvalue_108P").last().alias("pmts_dpdvalue_108P_last"),
+                pl.col("pmts_dpdvalue_108P").filter(
+                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
+                    ).arg_max().fill_null(-1).alias("pmts_dpdvalue_108P_maxidx"),
+                # TODO: check here which positive trend is better
+                #(pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last()).alias("pmts_dpdvalue_108P_pos"),
+                ((pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last())/pl.col("pmts_dpdvalue_108P").max()).fill_nan(1.0).alias("pmts_dpdvalue_108P_pos"),
+
+                # pmts_pmtsoverdue_635A values
+                pl.col("pmts_pmtsoverdue_635A").max().alias("pmts_pmtsoverdue_635A_max"),
+                pl.col("pmts_pmtsoverdue_635A").last().alias("pmts_pmtsoverdue_635A_last"),
+                pl.col("pmts_pmtsoverdue_635A").filter(
+                        (pl.col("pmts_pmtsoverdue_635A").is_not_null()) & (pl.col("pmts_pmtsoverdue_635A").gt(0.0))
+                    ).arg_max().fill_null(-1).alias("pmts_pmtsoverdue_635A_maxidx"),
+                ((pl.col("pmts_pmtsoverdue_635A").max() - pl.col("pmts_pmtsoverdue_635A").last())/pl.col("pmts_pmtsoverdue_635A").max()).fill_nan(1.0).alias("pmts_pmtsoverdue_635A_pos"),
+        
+            )
+        
         return data
     
     def aggregate_depth_2(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
@@ -624,10 +665,10 @@ class CreditRiskProcessing:
                 ##### Columns from credit_bureau_b_2
                 #####
 
-                (pl.col("pmts_date_1107D_last").max().dt.year() - pl.col("pmts_date_1107D_first").min().dt.year()).alias("pmts_date_1107D_duration"),
-                (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).dt.total_days().alias("pmts_date_1107D_duration_days"),
-                pl.col("pmts_date_1107D_first").min().dt.year().alias("pmts_date_1107D_first"),
-                pl.col("pmts_date_1107D_last").max().dt.year().alias("pmts_date_1107D_last"),
+                (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).alias("pmts_date_1107D_duration"),
+                (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).mul(365).alias("pmts_date_1107D_duration_days"),
+                pl.col("pmts_date_1107D_first").min().alias("pmts_date_1107D_first"),
+                pl.col("pmts_date_1107D_last").max().alias("pmts_date_1107D_last"),
 
             )
 
@@ -664,7 +705,7 @@ class CreditRiskProcessing:
             if len(data_files) == 0:
                 raise Exception(f"No parquet files found for {data}")
             elif len(data_files) == 1:
-                data_store[data] = pl.read_parquet(data_files[0].pipe(self.set_table_dtypes))
+                data_store[data] = pl.read_parquet(data_files[0]).pipe(self.set_table_dtypes)
             else:
                 data_store[data] = pl.concat([pl.read_parquet(file).pipe(self.set_table_dtypes) for file in data_files], how="vertical_relaxed")
 
@@ -736,9 +777,43 @@ class CreditRiskProcessing:
         data_store['base'] = data_store['base'].join(
             data_store['credit_bureau_b_1'], on="case_id", how='left'
         )
-                
+
+
+
+        # Reimplementation of reading and processing logic to benefit from lazy frames
+
+        # Read the parquet files, concat, process, aggregate and join them in chains
+        # Step 1: credit_bureau_b_2 -> credit_bureau_b_1 -> base
+        query_credit_bureau_b_2 = (
+            pl.read_parquet(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_b_2*.parquet')
+            .lazy()
+            .pipe(self.set_table_dtypes)
+            .pipe(self.encode_categorical_columns, 'credit_bureau_b_2')
+            .collect()
+            .pipe(self.aggregate_credit_bureau_b_2)
+            .lazy()
+        )
+
+        query_credit_bureau_b_1 = (
+            pl.read_parquet(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_b_1*.parquet')
+            .lazy()
+            .pipe(self.set_table_dtypes)
+            .pipe(self.encode_categorical_columns, 'credit_bureau_b_1')
+            .join(query_credit_bureau_b_2, on=["case_id", "num_group1"], how='outer')
+            .collect()
+            .pipe(self.aggregate_depth_1, 'credit_bureau_b_1')
+            .lazy()
+        )
+
+        howtojoin = 'left' if self.data_type=='test' else 'inner'
+        query_base = (
+            pl.read_parquet(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_base.parquet')
+            .lazy()
+            .join(query_credit_bureau_b_1, on="case_id", how=howtojoin) ## left, inner
+            .collect()
+        )
         
-        return data_store
+        return query_base
 
 # Main function here
 if __name__ == "__main__":
