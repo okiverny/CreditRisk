@@ -47,37 +47,6 @@ class CreditRiskProcessing:
 
         return df
 
-    def aggregate(self, df: pl.DataFrame, group_by: list, agg_dict: dict) -> pl.DataFrame:
-        """
-        Group the data by group_by and summarize the data by aggregated values:
-        - group_by: list of columns to group by
-        - agg_dict: dictionary of columns to aggregate and their aggregation functions
-        - return: aggregated DataFrame
-        """
-        aggregation_rules_by_endings = {
-            'L': [pl.max, pl.min, pl.first, pl.last],
-            'A': [pl.max, pl.min, pl.first, pl.last, pl.mean],
-            'D': [pl.max, pl.min, pl.first, pl.last, pl.mean],
-            'M': [pl.first, pl.last, pl.mode],
-            'T': [pl.first, pl.last],
-            'P': [pl.max, pl.min, pl.first, pl.last, pl.mean],
-        }
-
-        df_columns = df.columns
-        for col in df_columns:
-            if col[-1] in aggregation_rules_by_endings:
-                for agg_func in aggregation_rules_by_endings[col[-1]]:
-                    agg_dict[col] = agg_dict.get(col, []) + [agg_func]
-                    if col not in group_by:
-                        group_by.append(col)
-                        break # Move to the next column
-                    else:
-                        continue # Move to the next column
-                    #break # Move to the next column
-
-
-        #df = df.groupby(group_by).agg(agg_dict)
-        return df
     
     def cat_to_int_encode(self, data: pl.DataFrame, column_name: str, new_column_name: str, encoding_dict: dict) -> pl.DataFrame:
         """
@@ -123,13 +92,16 @@ class CreditRiskProcessing:
             # Cast to Enum, otherwise use replace method
             # roles_encoding = {"OTHER": 0, "COLLEAGUE": 1, "FRIEND": 2, "NEIGHBOR": 3, "OTHER_RELATIVE": 4, "CHILD": 5, "SIBLING": 6, "GRAND_PARENT": 7, "PARENT": 8, "SPOUSE": 9}
             # Load predefined dictionary
-            roles_encoding = predata.relatedpersons_role_762T_encoding
-            data = self.cat_to_int_encode(data, "relatedpersons_role_762T", "relatedpersons_role_encoded", roles_encoding)
+            #roles_encoding = predata.relatedpersons_role_762T_encoding
+            #data = self.cat_to_int_encode(data, "relatedpersons_role_762T", "relatedpersons_role_encoded", roles_encoding)
 
             # Chain an addition of several new columns
             # TODO: mormalize frequency by norm_frequency(predata.relatedpersons_role_762T_mean_target)
             # TODO: add another fill_null('None') in the end of chain?
             data = data.with_columns(
+                # Categorical ordered encoding
+                pl.col("relatedpersons_role_762T").replace(predata.relatedpersons_role_762T_encoding, default=None).alias("relatedpersons_role_encoded"),
+
                 pl.col("relatedpersons_role_762T").fill_null('None').replace(predata.relatedpersons_role_762T_mean_target, default=None).alias("relatedpersons_role_mean_target"),
                 pl.col("relatedpersons_role_762T").fill_null('None').replace(predata.relatedpersons_role_762T_frequency, default=None).alias("relatedpersons_role_frequency"),
 
@@ -154,17 +126,20 @@ class CreditRiskProcessing:
              # Dropped completely: empls_employer_name_740M, 
         
         if table_name=='applprev_2':
-            contact_type_encoding = predata.conts_type_509L_encoding
-            data = self.cat_to_int_encode(data, "conts_type_509L", "conts_type_encoded", contact_type_encoding)
-
-            credacc_cards_status_encoding = predata.credacc_cards_status_52L_encoding
-            data = self.cat_to_int_encode(data, "credacc_cards_status_52L", "credacc_cards_status_encoded", credacc_cards_status_encoding)
-
-            cacccardblochreas_147M_encoding = predata.cacccardblochreas_147M_encoding
-            data = self.cat_to_int_encode(data, "cacccardblochreas_147M", "cacccardblochreas_encoded", cacccardblochreas_147M_encoding)
+            # contact_type_encoding = predata.conts_type_509L_encoding
+            # data = self.cat_to_int_encode(data, "conts_type_509L", "conts_type_encoded", contact_type_encoding)
+            # credacc_cards_status_encoding = predata.credacc_cards_status_52L_encoding
+            # data = self.cat_to_int_encode(data, "credacc_cards_status_52L", "credacc_cards_status_encoded", credacc_cards_status_encoding)
+            # cacccardblochreas_147M_encoding = predata.cacccardblochreas_147M_encoding
+            # data = self.cat_to_int_encode(data, "cacccardblochreas_147M", "cacccardblochreas_encoded", cacccardblochreas_147M_encoding)
 
             # Adding new columns
             data = data.with_columns(
+                # Categorical ordered encoding
+                pl.col("conts_type_509L").replace(predata.conts_type_509L_encoding, default=None).alias("conts_type_encoded"),
+                pl.col("credacc_cards_status_52L").replace(predata.credacc_cards_status_52L_encoding, default=None).alias("credacc_cards_status_encoded"),
+                pl.col("cacccardblochreas_147M").replace(predata.cacccardblochreas_147M_encoding, default=None).alias("cacccardblochreas_encoded"),
+
                 pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_mean_target, default=None).alias("conts_type_mean_target"),
                 pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_frequency, default=None).alias("conts_type_frequency"),
 
@@ -254,49 +229,8 @@ class CreditRiskProcessing:
 
             )
 
-
         return data
     
-    def aggregate_credit_bureau_b_2(self, data: pl.DataFrame) -> pl.DataFrame:
-        """
-        Aggregate the data by credit_bureau_b_2:
-        - data: DataFrame to aggregate
-        - return: aggregated DataFrame
-        """
-
-        data = data.group_by(['case_id', 'num_group1']).agg(
-                # Number of non-null pmts_date_1107D (it has type pl.Date)
-                pl.when(pl.col("pmts_date_1107D").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_date_1107D"),
-                # First and last years of payments of the active contract pmts_date_1107D as well as duration
-                pl.col("pmts_date_1107D").min().dt.year().alias("pmts_date_1107D_first"),
-                pl.col("pmts_date_1107D").max().dt.year().alias("pmts_date_1107D_last"),
-                (pl.col("pmts_date_1107D").max().dt.year() - pl.col("pmts_date_1107D").min().dt.year()).alias("pmts_date_1107D_duration"),
-                (pl.col("pmts_date_1107D").max() - pl.col("pmts_date_1107D").min()).dt.total_days().alias("pmts_date_1107D_duration_days"),
-
-                # pmts_dpdvalue_108P values (TODO: is this money or days?)
-                pl.when(
-                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
-                    ).then(1).otherwise(0).sum().cast(pl.Int32).alias("num_pmts_dpdvalue_108P"),
-                pl.col("pmts_dpdvalue_108P").max().alias("pmts_dpdvalue_108P_max"),
-                pl.col("pmts_dpdvalue_108P").last().alias("pmts_dpdvalue_108P_last"),
-                pl.col("pmts_dpdvalue_108P").filter(
-                        (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
-                    ).arg_max().fill_null(-1).alias("pmts_dpdvalue_108P_maxidx"),
-                # TODO: check here which positive trend is better
-                #(pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last()).alias("pmts_dpdvalue_108P_pos"),
-                ((pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last())/pl.col("pmts_dpdvalue_108P").max()).fill_nan(1.0).alias("pmts_dpdvalue_108P_pos"),
-
-                # pmts_pmtsoverdue_635A values
-                pl.col("pmts_pmtsoverdue_635A").max().alias("pmts_pmtsoverdue_635A_max"),
-                pl.col("pmts_pmtsoverdue_635A").last().alias("pmts_pmtsoverdue_635A_last"),
-                pl.col("pmts_pmtsoverdue_635A").filter(
-                        (pl.col("pmts_pmtsoverdue_635A").is_not_null()) & (pl.col("pmts_pmtsoverdue_635A").gt(0.0))
-                    ).arg_max().fill_null(-1).alias("pmts_pmtsoverdue_635A_maxidx"),
-                ((pl.col("pmts_pmtsoverdue_635A").max() - pl.col("pmts_pmtsoverdue_635A").last())/pl.col("pmts_pmtsoverdue_635A").max()).fill_nan(1.0).alias("pmts_pmtsoverdue_635A_pos"),
-        
-            )
-        
-        return data
     
     def aggregate_depth_2(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
         """
@@ -311,7 +245,7 @@ class CreditRiskProcessing:
 
         if table_name=='person_2':
             # Encode categorical columns
-            data = self.encode_categorical_columns(data, table_name)
+            #data = self.encode_categorical_columns(data, table_name)
 
             
             data = data.group_by(['case_id','num_group1']).agg(
@@ -329,7 +263,7 @@ class CreditRiskProcessing:
             
         elif table_name=='applprev_2':
             # Encode categorical columns
-            data = self.encode_categorical_columns(data, table_name)
+            #data = self.encode_categorical_columns(data, table_name)
 
             data = data.group_by(['case_id','num_group1']).agg(
                     # Number of non-null contact roles indicated
@@ -357,7 +291,7 @@ class CreditRiskProcessing:
             
         elif table_name=='credit_bureau_a_2':
             # Encode categorical columns
-            data = self.encode_categorical_columns(data, table_name)
+            #data = self.encode_categorical_columns(data, table_name)
 
             collater_typofvalofguarant_unique = ['9a0c095e','8fd95e4b','06fb9ba8','3cbe86ba']
 
@@ -454,7 +388,7 @@ class CreditRiskProcessing:
             
         elif table_name=='credit_bureau_b_2':
             # Fill null for pmts_dpdvalue_108P (observed)
-            data = self.encode_categorical_columns(data, table_name)
+            #data = self.encode_categorical_columns(data, table_name)
 
             data = data.group_by(['case_id', 'num_group1']).agg(
                 # Number of non-null pmts_date_1107D (it has type pl.Date)
@@ -489,23 +423,6 @@ class CreditRiskProcessing:
 
             )
 
-        # elif table_name=='person_2' and not smart_features:
-        #     # Create columns with 0/1 for each role in relatedpersons_role_762T
-        #     roles_ordered = ["OTHER", "COLLEAGUE", "FRIEND", "NEIGHBOR", "OTHER_RELATIVE", "CHILD", "SIBLING", "GRAND_PARENT", "PARENT", "SPOUSE"]
-        #     for role in roles_ordered:
-        #         data = data.with_columns(
-        #             pl.col("relatedpersons_role_762T").eq(role).cast(pl.Int8).alias(f"relatedpersons_role_{role}_762T")
-        #         )
-
-        #     # Dropping unneeded columns
-        #     data = data.drop(["relatedpersons_role_762T"])
-
-        #     # Aggregating by case_id and num_group1
-        #     data = data.group_by(['case_id', 'num_group1']).agg(
-        #         # Agrregate all "relatedpersons_role_{role}_762T" columns for each role in roles_ordered as a sum
-        #         *[pl.col(f"relatedpersons_role_{role}_762T").sum().cast(pl.Int8).alias(f"num_related_persons_{role}") for role in roles_ordered],
-        #     )
-
         return data
     
     def aggregate_depth_1(self, data: pl.DataFrame, table_name: str) -> pl.DataFrame:
@@ -514,7 +431,7 @@ class CreditRiskProcessing:
         """
         if table_name=='credit_bureau_b_1':
             # Encoding categorical columns
-            data = self.encode_categorical_columns(data, table_name)
+            #data = self.encode_categorical_columns(data, table_name)
 
             # Columns to comute Summary Statistics (max, sum, mean, median)
             summary_columns = ['amount_1115A', 'totalamount_503A', 'totalamount_881A', 'overdueamountmax_950A',
@@ -687,58 +604,14 @@ class CreditRiskProcessing:
         
         return data
 
-    def load_data_and_process(self) -> dict:
+    def load_data_and_process(self) -> pl.DataFrame:
 
         # List of data tables to be loaded
         data_list = ['base', 'static_0', 'static_cb_0',
                      'applprev_1', 'other_1', 'tax_registry_a_1', 'tax_registry_b_1', 'tax_registry_c_1', 'credit_bureau_a_1',
                      'credit_bureau_b_1', 'deposit_1', 'person_1', 'debitcard_1',
                      'applprev_2', 'person_2', 'credit_bureau_a_2', 'credit_bureau_b_2']
-        if not self.complete:
-            data_list = data_list[:4]
-
-
-        data_store = {}
-        for data in data_list:
-            data_files = glob.glob('{data_path}parquet_files/{data_type}/{data_type}_{data}*.parquet'.format(data_path=self.data_path, data_type=self.data_type, data=data))
-
-            if len(data_files) == 0:
-                raise Exception(f"No parquet files found for {data}")
-            elif len(data_files) == 1:
-                data_store[data] = pl.read_parquet(data_files[0]).pipe(self.set_table_dtypes)
-            else:
-                data_store[data] = pl.concat([pl.read_parquet(file).pipe(self.set_table_dtypes) for file in data_files], how="vertical_relaxed")
-
-        # data_store = {
-        #     'base': ['{data_path}parquet_files/{data_type}/{data_type}_base.parquet'.format(data_path=self.data_path, data_type=self.data_type)],
-        #     'static_0': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_static_0*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'static_cb_0': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_static_cb_0*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'applprev_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_applprev_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'other_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_other_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'tax_registry_a_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_tax_registry_a_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'tax_registry_b_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_tax_registry_b_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'tax_registry_c_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_tax_registry_c_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'credit_bureau_a_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_a_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'credit_bureau_b_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_b_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'deposit_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_deposit_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'person_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_person_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'debitcard_1': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_debitcard_1*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'applprev_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_applprev_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'person_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_person_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'credit_bureau_a_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_a_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        #     'credit_bureau_b_2': glob.glob('{data_path}parquet_files/{data_type}/{data_type}_credit_bureau_b_2*.parquet'.format(data_path=self.data_path, data_type=self.data_type)),
-        # }
-
-        # Step 1: Processing depth_2 tables
-        for data_name in data_store:
-            # check if data name ends with "_2"
-            if data_name.endswith('_2'):
-                print(f'Processing the table: {data_name}')
-                # Apply aggregate_depth_2 function with arguments to the data
-                data_store[data_name] = data_store[data_name].pipe(self.aggregate_depth_2, data_name)
-
-
-
+        
         # Relations between data tables for concatination of depth 1 and 2 after aggregation of depth 2
         data_relations_by_depth = {
             'applprev_1': 'applprev_2',
@@ -746,38 +619,6 @@ class CreditRiskProcessing:
             'credit_bureau_a_1': 'credit_bureau_a_2',
             'credit_bureau_b_1': 'credit_bureau_b_2'
         }
-
-        # Step 2: join the corresponding depth 1 and 2 tables
-        for data_name in data_store:
-            # check if data name ends with "_1"
-            if data_name.endswith('_1'):
-                # get the corresponding depth 2 table name from data_relations_by_depth
-                depth_2_table_name = data_relations_by_depth.get(data_name)
-                if depth_2_table_name:
-                    print(f'Joining the table: {data_name} with the table: {depth_2_table_name}')
-                    # Join the depth 1 and depth 2 tables
-                    data_store[data_name] = data_store[data_name].join(
-                        data_store[depth_2_table_name], on=["case_id", "num_group1"], how='outer'
-                    )
-                    # Save memory
-                    del data_store[depth_2_table_name]
-                    gc.collect()
-
-        # Step 3: Processing depth_1 tables
-        for data_name in data_store:
-            # check if data name ends with "_1"
-            if data_name.endswith('_1'):
-                print(f'Processing the table: {data_name}')
-                # Apply aggregate_depth_1 function with arguments to the data
-                data_store[data_name] = data_store[data_name].pipe(self.aggregate_depth_1, data_name)
-
-
-
-        # Step 4: join 'base' and 'credit_bureau_b_1' tables by "case_id"
-        data_store['base'] = data_store['base'].join(
-            data_store['credit_bureau_b_1'], on="case_id", how='left'
-        )
-
 
 
         # Reimplementation of reading and processing logic to benefit from lazy frames
@@ -790,7 +631,7 @@ class CreditRiskProcessing:
             .pipe(self.set_table_dtypes)
             .pipe(self.encode_categorical_columns, 'credit_bureau_b_2')
             .collect()
-            .pipe(self.aggregate_credit_bureau_b_2)
+            .pipe(self.aggregate_depth_2, 'credit_bureau_b_2')
             .lazy()
         )
 
