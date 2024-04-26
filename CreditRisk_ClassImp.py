@@ -578,14 +578,121 @@ class CreditRiskProcessing:
                 # Interval columns
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_interval")],
 
-                #####
-                ##### Columns from credit_bureau_b_2
-                #####
 
+                # Columns from credit_bureau_b_2
                 (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).alias("pmts_date_1107D_duration"),
                 (pl.col("pmts_date_1107D_last").max() - pl.col("pmts_date_1107D_first").min()).mul(365).alias("pmts_date_1107D_duration_days"),
                 pl.col("pmts_date_1107D_first").min().alias("pmts_date_1107D_first"),
                 pl.col("pmts_date_1107D_last").max().alias("pmts_date_1107D_last"),
+
+            )
+
+        if table_name=='credit_bureau_a_1':
+
+            # TODO
+            # - 'annualeffectiverate_199L','annualeffectiverate_63L': consider aggregating by other relevant features, such as 
+            #    1) loan type,
+            #    2) borrower credit score, 
+            #    3) loan purpose (purposeofcred_426M,purposeofcred_722M,purposeofcred_874M).
+            #   This way, you can analyze how interest rates vary across different segments.
+
+
+            # Columns to comute Summary Statistics (max, sum, mean, median)
+            summary_columns = ['annualeffectiverate_199L','annualeffectiverate_63L','contractsum_5085717L','interestrate_508L']
+            mean_columns = ['credlmt_230A','credlmt_935A','nominalrate_281L','nominalrate_498L']
+            sum_columns = ['credlmt_230A','credlmt_935A','debtoutstand_525A','debtoverdue_47A','dpdmax_139P','dpdmax_757P','instlamount_852A','instlamount_768A',
+                           'monthlyinstlamount_674A','monthlyinstlamount_332A']
+            max_columns = ['credlmt_230A','credlmt_935A','dpdmax_139P','dpdmax_757P']
+            min_columns = []
+            std_columns = ['nominalrate_281L','nominalrate_498L']
+            number_non0s_column = ['dpdmax_139P','dpdmax_757P','monthlyinstlamount_674A','monthlyinstlamount_332A']
+
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Number of non-null entries in summary columns
+                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in summary_columns],
+
+                # Number of non-null entries and non-zeros in number_non0s_column columns
+                *[pl.when(
+                    (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                    ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in number_non0s_column],
+
+                # Create new features from summary columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+
+                # Create mean values for columns in mean_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+
+                # Create std values for columns in std_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).std().fill_null(0.0).alias(col+"_std") for col in std_columns],
+
+                # Create columns with sum values from sum_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+
+                # Create columns with max values from max_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+
+                # Create columns with min values from min_columns
+                *[pl.col(col).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+
+                
+                # Diffs
+                (pl.col('annualeffectiverate_63L').sum().fill_null(0.0) - pl.col('annualeffectiverate_199L').sum().fill_null(0.0)).alias('annualeffectiverate_63L_199L_sum_diff'),
+                (pl.col('annualeffectiverate_63L').mean().fill_null(0.0) - pl.col('annualeffectiverate_199L').mean().fill_null(0.0)).alias('annualeffectiverate_63L_199L_mean_diff'),
+
+                (pl.col('credlmt_935A').sum().fill_null(0.0) - pl.col('credlmt_230A').sum().fill_null(0.0)).alias('credlmt_935A_1230A_sum_diff'),
+                (pl.col('credlmt_935A').mean().fill_null(0.0) - pl.col('credlmt_230A').mean().fill_null(0.0)).alias('credlmt_935A_230A_mean_diff'),
+
+                # Interest Rate Spread: Calculate the difference between the nominal interest rates for active and closed contracts. This spread could be indicative of risk.
+                (pl.col('nominalrate_281L').mean().fill_null(0.0) - pl.col('nominalrate_498L').mean().fill_null(0.0)).alias('nominalrate_281L_498L_mean_diff'),
+
+                # Contract Sum Spread: Calculate the difference between the sum of active and closed contracts. This spread could be indicative of risk.
+                (pl.col('contractsum_5085717L').mean().fill_null(0.0) - pl.col('contractsum_5085717L').mean().fill_null(0.0)).alias('contractsum_5085717L_mean_diff'),
+
+                # DPD Spread: Calculate the difference between the maximum DPD values for active and closed contracts. This spread could be indicative of risk.
+                (pl.col('dpdmax_139P').mean().fill_null(0.0) - pl.col('dpdmax_757P').mean().fill_null(0.0)).alias('dpdmax_139P_757P_mean_diff'),
+
+                # DPD Spread: Calculate the difference between the maximum DPD values for active and closed contracts. This
+
+                # Instalment Difference
+                (pl.col('instlamount_768A').sum().fill_null(0.0) - pl.col('instlamount_852A').sum().fill_null(0.0)).alias('instlamount_768A_852A_diff'),
+
+                # Overdue Percentage: Calculate the percentage of overdue debt (debtoverdue_47A) relative to the total outstanding debt (debtoutstand_525A). High percentages may signal credit risk.
+                (pl.col('debtoverdue_47A').sum().fill_null(0.0) / pl.col('debtoutstand_525A').sum().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('debtoverdue_47A_debtoutstand_525A_ratio'),
+                
+                # Debt Utilization: Divide the outstanding debt by the credit limit. High utilization ratios may indicate risk.
+                (pl.col('debtoutstand_525A').sum().fill_null(0.0) / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('debtoutstand_525A_credlmt_935A_ratio'),
+
+                # Instalment Coverage Ratio: Divide the total amount paid (instlamount_852A) by the total amount due (instlamount_768A). A higher ratio suggests better payment behavior.
+                (pl.col('instlamount_852A').sum().fill_null(0.0) / pl.col('instlamount_768A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('instlamount_852A_768A_ratio'),
+
+                # Instalment Difference: Calculate the difference between monthlyinstlamount_674A and monthlyinstlamount_332A. A larger difference could be relevant for risk assessment.
+                (pl.col('monthlyinstlamount_332A').sum().fill_null(0.0) - pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).alias('monthlyinstlamount_332A_674A_diff'),
+
+                # Instalment Coverage Ratio: Divide the total amount paid (monthlyinstlamount_674A) by the total amount due (monthlyinstlamount_332A). A higher ratio suggests better payment behavior.
+                (pl.col('monthlyinstlamount_332A').sum().fill_null(0.0) / pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('monthlyinstlamount_332A_674A_ratio'),
+
+
 
             )
 
@@ -653,8 +760,41 @@ class CreditRiskProcessing:
             .join(query_credit_bureau_b_1, on="case_id", how=howtojoin) ## left, inner
             .collect()
         )
+
+
+        # Step 2: credit_bureau_b_2 -> credit_bureau_b_1 -> base
+        dataframes_credit_bureau_a_2 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_2*.parquet')):
+            if ifile>1: continue
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'credit_bureau_a_2')
+                .pipe(self.aggregate_depth_2, 'credit_bureau_a_2')
+                .lazy()
+            )
+            dataframes_credit_bureau_a_2.append(q.collect())
+
+        # Concat the dataframes
+        query_credit_bureau_a_2 = pl.concat(dataframes_credit_bureau_a_2, how='vertical_relaxed')
+
+        dataframes_credit_bureau_a_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_1*.parquet')):
+            if ifile>1: continue
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+            )
+            dataframes_credit_bureau_a_1.append(q.collect())
+
+        # Concat the dataframes
+        query_credit_bureau_a_1 = pl.concat(dataframes_credit_bureau_a_1, how='vertical_relaxed')
+
+
         
-        return query_base
+        return query_credit_bureau_a_1 # query_base
 
 # Main function here
 if __name__ == "__main__":
