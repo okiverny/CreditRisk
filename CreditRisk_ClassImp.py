@@ -233,37 +233,35 @@ class CreditRiskProcessing:
                 pl.col("classificationofcontr_13M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("classificationofcontr_13M_mean_target"),
                 pl.col("classificationofcontr_13M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("classificationofcontr_13M_frequency"),
 
-                pl.col("classificationofcontr_400M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("classificationofcontr_400M_mean_target"),
-                pl.col("classificationofcontr_400M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("classificationofcontr_400M_frequency"),
+                pl.col("classificationofcontr_400M").replace(predata.classificationofcontr_400M_mean_target, default=None).alias("classificationofcontr_400M_mean_target"),
+                pl.col("classificationofcontr_400M").replace(predata.classificationofcontr_400M_frequency, default=None).alias("classificationofcontr_400M_frequency"),
 
-                pl.col("contractst_545M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("contractst_545M_mean_target"),
-                pl.col("contractst_545M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("contractst_545M_frequency"),
+                pl.col("contractst_545M").replace(predata.contractst_545M_mean_target, default=None).alias("contractst_545M_mean_target"),
+                pl.col("contractst_545M").replace(predata.contractst_545M_frequency, default=None).alias("contractst_545M_frequency"),
 
-                pl.col("contractst_964M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("contractst_964M_mean_target"),
-                pl.col("contractst_964M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("contractst_964M_frequency"),
+                pl.col("contractst_964M").replace(predata.contractst_964M_mean_target, default=None).alias("contractst_964M_mean_target"),
+                pl.col("contractst_964M").replace(predata.contractst_964M_frequency, default=None).alias("contractst_964M_frequency"),
 
-                pl.col("description_351M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("description_351M_mean_target"),
-                pl.col("description_351M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("description_351M_frequency"),
+                pl.col("description_351M").replace(predata.description_351M_mean_target, default=None).alias("description_351M_mean_target"),
+                pl.col("description_351M").replace(predata.description_351M_frequency, default=None).alias("description_351M_frequency"),
 
-                pl.col("financialinstitution_382M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("financialinstitution_382M_mean_target"),
-                pl.col("financialinstitution_382M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("financialinstitution_382M_frequency"),
+                pl.col("financialinstitution_382M").replace(predata.financialinstitution_382M_mean_target, default=None).alias("financialinstitution_382M_mean_target"),
+                pl.col("financialinstitution_382M").replace(predata.financialinstitution_382M_frequency, default=None).alias("financialinstitution_382M_frequency"),
 
-                pl.col("financialinstitution_591M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("financialinstitution_591M_mean_target"),
-                pl.col("financialinstitution_591M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("financialinstitution_591M_frequency"),
+                pl.col("financialinstitution_591M").replace(predata.financialinstitution_591M_mean_target, default=None).alias("financialinstitution_591M_mean_target"),
+                pl.col("financialinstitution_591M").replace(predata.financialinstitution_591M_frequency, default=None).alias("financialinstitution_591M_frequency"),
 
-                pl.col("purposeofcred_426M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("purposeofcred_426M_mean_target"),
-                pl.col("purposeofcred_426M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("purposeofcred_426M_frequency"),
+                pl.col("purposeofcred_426M").replace(predata.purposeofcred_426M_mean_target, default=None).alias("purposeofcred_426M_mean_target"),
+                pl.col("purposeofcred_426M").replace(predata.purposeofcred_426M_frequency, default=None).alias("purposeofcred_426M_frequency"),
 
-                pl.col("purposeofcred_874M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("purposeofcred_874M_mean_target"),
-                pl.col("purposeofcred_874M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("purposeofcred_874M_frequency"),
+                pl.col("purposeofcred_874M").replace(predata.purposeofcred_874M_mean_target, default=None).alias("purposeofcred_874M_mean_target"),
+                pl.col("purposeofcred_874M").replace(predata.purposeofcred_874M_frequency, default=None).alias("purposeofcred_874M_frequency"),
 
+                pl.col("subjectrole_182M").replace(predata.subjectrole_182M_mean_target, default=None).alias("subjectrole_182M_mean_target"),
+                pl.col("subjectrole_182M").replace(predata.subjectrole_182M_frequency, default=None).alias("subjectrole_182M_frequency"),
 
-                pl.col("subjectrole_182M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("subjectrole_182M_mean_target"),
-                pl.col("subjectrole_182M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("subjectrole_182M_frequency"),
-
-                pl.col("subjectrole_93M").replace(predata.classificationofcontr_13M_mean_target, default=None).alias("subjectrole_93M_mean_target"),
-                pl.col("subjectrole_93M").replace(predata.classificationofcontr_13M_frequency, default=None).alias("subjectrole_93M_frequency"),
-
+                pl.col("subjectrole_93M").replace(predata.subjectrole_93M_mean_target, default=None).alias("subjectrole_93M_mean_target"),
+                pl.col("subjectrole_93M").replace(predata.subjectrole_93M_frequency, default=None).alias("subjectrole_93M_frequency"),
             )
 
         return data
