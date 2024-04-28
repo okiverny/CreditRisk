@@ -122,8 +122,8 @@ dateofbirth_337D,Client's date of birth.
 dateofbirth_342D,Client's date of birth.
 dateofcredend_289D,End date of an active credit contract.
 dateofcredend_353D,End date of a closed credit contract.
-dateofcredstart_181D,Date when the credit contract was closed.
-dateofcredstart_739D,Start date of a closed credit contract.
+dateofcredstart_181D,Start date of a closed credit contract.
+dateofcredstart_739D,Start date of an active credit contract.
 dateofrealrepmt_138D,Date of credit's closure (contract termination date).
 days120_123L,Number of credit bureau queries for the last 120 days.
 days180_256L,Number of credit bureau queries for last 180 days.
