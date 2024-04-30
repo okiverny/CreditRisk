@@ -1,6 +1,6 @@
 import os, glob
-
 import polars as pl
+import polars.selectors as cs
 import numpy as np
 import pandas as pd
 
@@ -162,13 +162,13 @@ class CreditRiskProcessing:
                 pl.col("collater_typofvalofguarant_298M").replace(predata.collater_typofvalofguarant_298M_frequency, default=None).alias("collater_typofvalofguarant_298M_frequency"),
 
                 # Add columns as one-hot-encoded values of collater_typofvalofguarant_298M
-                *[pl.col("collater_typofvalofguarant_298M").eq(role).cast(pl.Int8).alias(f"collater_typofvalofguarant_298M_{role}") for role in collater_typofvalofguarant_unique],
+                *[pl.col("collater_typofvalofguarant_298M").eq(role).cast(pl.Int16).alias(f"collater_typofvalofguarant_298M_{role}") for role in collater_typofvalofguarant_unique],
 
                 pl.col("collater_typofvalofguarant_407M").replace(predata.collater_typofvalofguarant_407M_mean_target, default=None).alias("collater_typofvalofguarant_407M_mean_target"),
                 pl.col("collater_typofvalofguarant_407M").replace(predata.collater_typofvalofguarant_407M_frequency, default=None).alias("collater_typofvalofguarant_407M_frequency"),
 
                 # Add columns as one-hot-encoded values of collater_typofvalofguarant_407M
-                *[pl.col("collater_typofvalofguarant_407M").eq(role).cast(pl.Int8).alias(f"collater_typofvalofguarant_407M_{role}") for role in collater_typofvalofguarant_unique],
+                *[pl.col("collater_typofvalofguarant_407M").eq(role).cast(pl.Int16).alias(f"collater_typofvalofguarant_407M_{role}") for role in collater_typofvalofguarant_unique],
 
                 pl.col("collaterals_typeofguarante_359M").replace(predata.collaterals_typeofguarante_359M_mean_target, default=None).alias("collaterals_typeofguarante_359M_mean_target"),
                 pl.col("collaterals_typeofguarante_359M").replace(predata.collaterals_typeofguarante_359M_frequency, default=None).alias("collaterals_typeofguarante_359M_frequency"),
@@ -285,7 +285,7 @@ class CreditRiskProcessing:
             
             data = data.group_by(['case_id','num_group1']).agg(
                     # Number of non-null related person roles indicated
-                    pl.when(pl.col("relatedpersons_role_762T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_related_persons"),
+                    pl.when(pl.col("relatedpersons_role_762T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_related_persons"),
                     # The most influential role
                     pl.col("relatedpersons_role_encoded").max().alias("most_influential_role"),
                     # Start date of employment
@@ -302,19 +302,19 @@ class CreditRiskProcessing:
 
             data = data.group_by(['case_id','num_group1']).agg(
                     # Number of non-null contact roles indicated
-                    pl.when(pl.col("conts_type_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_contacts"),
+                    pl.when(pl.col("conts_type_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_contacts"),
                     # The most influential contact
                     pl.col("conts_type_encoded").max().alias("most_influential_contact"),
 
                     # Number of non-null credacc_cards_status
                     # TODO: check .replace("a55475b1", None) addition
-                    pl.when(pl.col("credacc_cards_status_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_credacc_cards_status"),
+                    pl.when(pl.col("credacc_cards_status_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_credacc_cards_status"),
                     # The most influential credacc_cards_status
                     pl.col("credacc_cards_status_encoded").max().alias("most_influential_credacc_cards_status"),
 
                     # Number of credit card blocks
                     # TODO: check .replace("a55475b1", None) addition
-                    pl.when(pl.col("cacccardblochreas_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_credit_card_blocks"),
+                    pl.when(pl.col("cacccardblochreas_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_credit_card_blocks"),
                     # The most influential credit card block
                     pl.col("cacccardblochreas_encoded").max().alias("most_influential_credit_card_block"),
 
@@ -332,31 +332,31 @@ class CreditRiskProcessing:
 
             data = data.group_by(['case_id', 'num_group1']).agg(
                     # Number of non-null collater_typofvalofguarant_298M
-                    pl.when(pl.col("collater_typofvalofguarant_298M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_typofvalofguarant_298M"),
+                    pl.when(pl.col("collater_typofvalofguarant_298M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_298M"),
                     # Sum of one-hot-encoded columns
                     *[pl.col(f"collater_typofvalofguarant_298M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
 
                     # Number of non-null collater_typofvalofguarant_407M
-                    pl.when(pl.col("collater_typofvalofguarant_407M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_typofvalofguarant_407M"),
+                    pl.when(pl.col("collater_typofvalofguarant_407M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_407M"),
                     # Sum of one-hot-encoded columns
                     *[pl.col(f"collater_typofvalofguarant_407M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
 
                     # Number of non-null collater_valueofguarantee_1124L
-                    pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_valueofguarantee_1124L"),
+                    pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_1124L"),
                     # Total sum and mean of collater_valueofguarantee_1124L
                     pl.col("collater_valueofguarantee_1124L").sum().alias("collater_valueofguarantee_1124L_sum"),
                     pl.col("collater_valueofguarantee_1124L").mean().alias("collater_valueofguarantee_1124L_mean"),
 
                     # Number of non-null collater_valueofguarantee_876L
-                    pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collater_valueofguarantee_876L"),
+                    pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_876L"),
                     # Total sum and mean of collater_valueofguarantee_876L
                     pl.col("collater_valueofguarantee_876L").sum().alias("collater_valueofguarantee_876L_sum"),
                     pl.col("collater_valueofguarantee_876L").mean().alias("collater_valueofguarantee_876L_mean"),
 
                     # Number of non-null collaterals_typeofguarante_359M
-                    pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collaterals_typeofguarante_359M"),
+                    pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_359M"),
                     # Number of non-null collaterals_typeofguarante_669M
-                    pl.when(pl.col("collaterals_typeofguarante_669M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_collaterals_typeofguarante_669M"),
+                    pl.when(pl.col("collaterals_typeofguarante_669M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_669M"),
 
                     # Days past due of the payment columns (pmts_dpd_1073P)
                     pl.when(
@@ -375,7 +375,7 @@ class CreditRiskProcessing:
                     # Overdue payment
                     pl.when(
                             (pl.col("pmts_overdue_1140A").is_not_null()) & (pl.col("pmts_overdue_1140A").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_overdue_1140A"),
+                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1140A"),
                     pl.col("pmts_overdue_1140A").sum().alias("pmts_overdue_1140A_sum"),
                     pl.col("pmts_overdue_1140A").mean().alias("pmts_overdue_1140A_mean"),
                     pl.col("pmts_overdue_1140A").filter(
@@ -384,7 +384,7 @@ class CreditRiskProcessing:
 
                     pl.when(
                             (pl.col("pmts_overdue_1152A").is_not_null()) & (pl.col("pmts_overdue_1152A").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_overdue_1152A"),
+                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1152A"),
                     pl.col("pmts_overdue_1152A").sum().alias("pmts_overdue_1152A_sum"),
                     pl.col("pmts_overdue_1152A").mean().alias("pmts_overdue_1152A_mean"),
                     pl.col("pmts_overdue_1152A").filter(
@@ -392,17 +392,17 @@ class CreditRiskProcessing:
                         ).last().alias("pmts_overdue_1152A_last"),
 
                     # Number of non-null subjectroles_name_541M
-                    pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_subjectroles_name_541M"),
+                    pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_subjectroles_name_541M"),
 
                     # Years of payments of closed credit (pmts_year_507T) contract and the current contract (pmts_year_1139T)
                     # Number of non-null pmts_year_507T
-                    pl.when(pl.col("pmts_year_507T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_year_507T"),
+                    pl.when(pl.col("pmts_year_507T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_507T"),
                     # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
                     pl.col("pmts_year_507T").cast(pl.Float64).min().alias("pmts_year_507T_first"),
                     pl.col("pmts_year_507T").cast(pl.Float64).max().alias("pmts_year_507T_last"),
                     (pl.col("pmts_year_507T").cast(pl.Float64).max() - pl.col("pmts_year_507T").cast(pl.Float64).min()).alias("pmts_year_507T_duration"),
                     # Number of non-null pmts_year_507T
-                    pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_year_1139T"),
+                    pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_1139T"),
                     # First and last years of payments of the current credit (pmts_year_1139T) contract, avoiding null, and their difference
                     pl.col("pmts_year_1139T").cast(pl.Float64).min().alias("pmts_year_1139T_first"),
                     pl.col("pmts_year_1139T").cast(pl.Float64).max().alias("pmts_year_1139T_last"),
@@ -427,7 +427,7 @@ class CreditRiskProcessing:
 
             data = data.group_by(['case_id', 'num_group1']).agg(
                 # Number of non-null pmts_date_1107D (it has type pl.Date)
-                pl.when(pl.col("pmts_date_1107D").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_pmts_date_1107D"),
+                pl.when(pl.col("pmts_date_1107D").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_date_1107D"),
                 # First and last years of payments of the active contract pmts_date_1107D as well as duration
                 pl.col("pmts_date_1107D").min().dt.year().alias("pmts_date_1107D_first"),
                 pl.col("pmts_date_1107D").max().dt.year().alias("pmts_date_1107D_last"),
@@ -490,7 +490,7 @@ class CreditRiskProcessing:
             data = data.group_by('case_id').agg(
 
                 # Number of non-null entries in summary columns
-                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in summary_columns],
+                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in summary_columns],
 
                 # Create new features from summary columns
                 *[pl.col(col).filter(
@@ -580,9 +580,9 @@ class CreditRiskProcessing:
 
 
                 # Number of non-null and greater than 0.0 values in dpd_550P, dpd_733P and dpdmax_851P columns
-                pl.when( (pl.col("dpd_550P").is_not_null()) & (pl.col("dpd_550P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpd_550P"),
-                pl.when( (pl.col("dpd_733P").is_not_null()) & (pl.col("dpd_733P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpd_733P"),
-                pl.when( (pl.col("dpdmax_851P").is_not_null()) & (pl.col("dpdmax_851P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_dpdmax_851P"),
+                pl.when( (pl.col("dpd_550P").is_not_null()) & (pl.col("dpd_550P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_dpd_550P"),
+                pl.when( (pl.col("dpd_733P").is_not_null()) & (pl.col("dpd_733P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_dpd_733P"),
+                pl.when( (pl.col("dpdmax_851P").is_not_null()) & (pl.col("dpdmax_851P").gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_dpdmax_851P"),
                 
 
                 # Columns for month (dpdmaxdatemonth_804T) and years (dpdmaxdateyear_742T)
@@ -634,7 +634,7 @@ class CreditRiskProcessing:
 
             # Columns to comute Summary Statistics (max, sum, mean, median)
             summary_columns = ['annualeffectiverate_199L','annualeffectiverate_63L','contractsum_5085717L','interestrate_508L']
-            mean_columns = ['credlmt_230A','credlmt_935A','nominalrate_281L','nominalrate_498L','numberofinstls_229L','numberofinstls_320L','numberofoutstandinstls_520L','numberofoutstandinstls_59L'
+            mean_columns = ['credlmt_230A','credlmt_935A','nominalrate_281L','nominalrate_498L','numberofinstls_229L','numberofinstls_320L','numberofoutstandinstls_520L','numberofoutstandinstls_59L',
                             'numberofoverdueinstls_725L','numberofoverdueinstls_834L','periodicityofpmts_1102L','periodicityofpmts_837L','prolongationcount_1120L','prolongationcount_599L',
                             'totalamount_6A','totalamount_996A']
             sum_columns = ['credlmt_230A','credlmt_935A','debtoutstand_525A','debtoverdue_47A','dpdmax_139P','dpdmax_757P','instlamount_852A','instlamount_768A',
@@ -650,15 +650,25 @@ class CreditRiskProcessing:
             number_non0s_column = ['dpdmax_139P','dpdmax_757P','monthlyinstlamount_674A','monthlyinstlamount_332A','numberofoutstandinstls_520L','numberofoutstandinstls_59L',
                                    'numberofoverdueinstlmax_1151L','numberofoverdueinstls_725L','numberofoverdueinstls_834L','dateofcredend_353D','dateofcredend_289D']
 
+            # Similar lists for depth_2 table
+            summary_columns += []
+            mean_columns += []
+            sum_columns += []
+            max_columns += []
+            min_columns += []
+            std_columns += []
+
+            collater_typofvalofguarant_unique = ['9a0c095e','8fd95e4b','06fb9ba8','3cbe86ba']
+
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Number of non-null entries in summary columns
-                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in summary_columns],
+                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in summary_columns],
 
                 # Number of non-null entries and non-zeros in number_non0s_column columns
                 *[pl.when(
                     (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                    ).then(1).otherwise(0).sum().cast(pl.Int8).alias("num_"+col) for col in number_non0s_column],
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in number_non0s_column],
 
                 # Create new features from summary columns
                 *[pl.col(col).filter(
@@ -790,30 +800,34 @@ class CreditRiskProcessing:
                 (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().std().fill_null(0.0).alias('dateofcredend_353D_dateofrealrepmt_138D_std'),
 
                 # Last updates:
-                pl.col('lastupdate_1112D').max().alias('lastupdate_1112D_max'),
-                pl.col('lastupdate_388D').max().alias('lastupdate_388D_max'),
-                pl.col('lastupdate_1112D').min().alias('lastupdate_1112D_min'), # Contracts without long time update?
-                pl.col('lastupdate_388D').min().alias('lastupdate_388D_min'),   # Contracts without long time update?
+                #pl.col('lastupdate_1112D').max().alias('lastupdate_1112D_max'),
+                #pl.col('lastupdate_388D').max().alias('lastupdate_388D_max'),
+                #pl.col('lastupdate_1112D').min().alias('lastupdate_1112D_min'), # Contracts without long time update?
+                #pl.col('lastupdate_388D').min().alias('lastupdate_388D_min'),   # Contracts without long time update?
 
                 # Latest date with maximum number of overdue instl (numberofoverdueinstlmaxdat_148D) and (numberofoverdueinstlmaxdat_641D)
-                pl.col('numberofoverdueinstlmaxdat_148D').max().alias('numberofoverdueinstlmaxdat_148D_max'),
-                pl.col('numberofoverdueinstlmaxdat_641D').max().alias('numberofoverdueinstlmaxdat_641D_max'),
+                #pl.col('numberofoverdueinstlmaxdat_148D').max().alias('numberofoverdueinstlmaxdat_148D_max'),
+                #pl.col('numberofoverdueinstlmaxdat_641D').max().alias('numberofoverdueinstlmaxdat_641D_max'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_148D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_148D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_641D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_641D_diff'),
 
                 # remaining time of max overdue installments date till contract end
                 (pl.col("dateofcredend_353D") - pl.col("numberofoverdueinstlmaxdat_148D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_numberofoverdueinstlmaxdat_148D_diff'),
                 (pl.col("dateofcredend_289D") - pl.col("numberofoverdueinstlmaxdat_641D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_numberofoverdueinstlmaxdat_641D_diff'),
 
                 # Latest date with maximal overdue amount (overdueamountmax2date_1002D) and (overdueamountmax2date_1142D)
-                pl.col('overdueamountmax2date_1002D').max().alias('overdueamountmax2date_1002D_max'),
-                pl.col('overdueamountmax2date_1142D').max().alias('overdueamountmax2date_1142D_max'),
+                #pl.col('overdueamountmax2date_1002D').max().alias('overdueamountmax2date_1002D_max'),
+                #pl.col('overdueamountmax2date_1142D').max().alias('overdueamountmax2date_1142D_max'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1002D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_overdueamountmax2date_1002D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1142D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_overdueamountmax2date_1142D_diff'),
                 
                 # remaining time of max overdue amount date till contract end
                 (pl.col("dateofcredend_353D") - pl.col("overdueamountmax2date_1002D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_overdueamountmax2date_1002D_diff'),
                 (pl.col("dateofcredend_289D") - pl.col("overdueamountmax2date_1142D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_overdueamountmax2date_1142D_diff'),
 
                 # Date from str
-                (pl.date(pl.col("overdueamountmaxdateyear_994T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_284T").cast(pl.Float64), 1).max()).alias("overdueamountmaxdate_994T_284T_fromstr_last"),
-                (pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1).max()).alias("overdueamountmaxdate_2T_365T_fromstr_last"),
+                #(pl.date(pl.col("overdueamountmaxdateyear_994T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_284T").cast(pl.Float64), 1).max()).alias("overdueamountmaxdate_994T_284T_fromstr_last"),
+                #(pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1).max()).alias("overdueamountmaxdate_2T_365T_fromstr_last"),
 
                 # remaining time of max overdue amount date till contract end (from str version)
                 (pl.col("dateofcredend_353D") - pl.date(pl.col("overdueamountmaxdateyear_994T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_284T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_overdueamountmaxdate_994T_284T_diff'),
@@ -823,8 +837,8 @@ class CreditRiskProcessing:
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1)).dt.total_days().mean().alias("overdueamountmaxdate_2T_365T_refreshed_mean"),
 
                 # Date from str
-                (pl.date(pl.col("dpdmaxdateyear_896T").cast(pl.Float64),pl.col("dpdmaxdatemonth_442T").cast(pl.Float64), 1).max()).alias("dpdmaxdate_896T_442T_fromstr_last"),
-                (pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1).max()).alias("dpdmaxdate_596T_89T_fromstr_last"),
+                #(pl.date(pl.col("dpdmaxdateyear_896T").cast(pl.Float64),pl.col("dpdmaxdatemonth_442T").cast(pl.Float64), 1).max()).alias("dpdmaxdate_896T_442T_fromstr_last"),
+                #(pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1).max()).alias("dpdmaxdate_596T_89T_fromstr_last"),
 
                  # remaining time of max dpd date till contract end (from str version)
                 (pl.col("dateofcredend_353D") - pl.date(pl.col("dpdmaxdateyear_896T").cast(pl.Float64),pl.col("dpdmaxdatemonth_442T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_dpdmaxdate_896T_442T_diff'),
@@ -834,9 +848,15 @@ class CreditRiskProcessing:
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1)).dt.total_days().mean().alias("dpdmaxdateyear_596T_89T_refreshed_mean"),
 
                 # Refresh date info
-                pl.col('refreshdate_3813885D').min().alias('refreshdate_3813885D_min'),
-                pl.col('refreshdate_3813885D').max().alias('refreshdate_3813885D_max'),
-                pl.col('refreshdate_3813885D').mean().alias('refreshdate_3813885D_mean'),
+                #pl.col('refreshdate_3813885D').min().alias('refreshdate_3813885D_min'),
+                #pl.col('refreshdate_3813885D').max().alias('refreshdate_3813885D_max'),
+                #pl.col('refreshdate_3813885D').mean().alias('refreshdate_3813885D_mean'),
+                # difference between max and min values of refreshdate_3813885D in days
+                (pl.col('refreshdate_3813885D').max() - pl.col('refreshdate_3813885D').min()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_diff'),
+                # standard deviation of refreshdate_3813885D in days
+                (pl.col('refreshdate_3813885D') - pl.col('refreshdate_3813885D').mean()).std().dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_std'),
+
+
 
                 # Difference with respect to refresh date
                 (pl.col('dateofcredend_289D') - pl.col('refreshdate_3813885D')).dt.total_days().mean().alias('dateofcredend_289D_refreshdate_3813885D_diff_mean'),
@@ -850,6 +870,34 @@ class CreditRiskProcessing:
                 (pl.col('refreshdate_3813885D') - pl.col('lastupdate_1112D')).dt.total_days().mean().alias('refreshdate_3813885D_lastupdate_1112D_diff_mean'),
                 (pl.col('refreshdate_3813885D') - pl.col('lastupdate_388D')).dt.total_days().mean().alias('refreshdate_3813885D_lastupdate_388D_diff_mean'),
                 (pl.col('refreshdate_3813885D') - pl.col('lastupdate_388D')).dt.total_days().min().alias('refreshdate_3813885D_lastupdate_388D_diff_min'),
+
+                ######################################
+                ##### Depth 2 data --->
+
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+
+                # TODO: check more depth 2 aggregations
+                # Aggregate with sum if column starts with 'num_', but ignore the column 'num_group1'
+                *[pl.col(col).sum().alias(col) for col in data.columns if col.startswith("num_") and col != "num_group1"],
+                #*[pl.col(col).sum().alias(col+'_sum') for col in data.columns if col.startswith("num_")],
+                # Aggregate with mean if column ends with '_mean'
+                *[pl.col(col).mean().alias(col+'_mean') for col in data.columns if col.endswith("_mean")],
+                # Aggregare with min if columns ends with '_first'
+                *[pl.col(col).min().alias(col+'_min') for col in data.columns if col.endswith("_first")],
+                # Aggregate with max if columns ends with '_last'
+                *[pl.col(col).max().alias(col+'_max') for col in data.columns if col.endswith("_last")],
+                # Aggregate with mean if columns ends with '_duration'
+                *[pl.col(col).mean().alias(col+'_mean') for col in data.columns if col.endswith("_duration")],
+                # Aggregate with mean if column ends with '_diff'
+                *[pl.col(col).mean().alias(col+'_mean') for col in data.columns if col.endswith("_diff")],
+                
+                ###### Depth 2 one-hot-encoded features
+                # Sum of one-hot-encoded columns
+                *[pl.col(f"collater_typofvalofguarant_{role}_298M").sum().alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
+                *[pl.col(f"collater_typofvalofguarant_{role}_407M").sum().alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
 
             )
 
@@ -904,7 +952,7 @@ class CreditRiskProcessing:
             .lazy()
             .pipe(self.set_table_dtypes)
             .pipe(self.encode_categorical_columns, 'credit_bureau_b_1')
-            .join(query_credit_bureau_b_2, on=["case_id", "num_group1"], how='outer')
+            .join(query_credit_bureau_b_2, on=["case_id", "num_group1"], how='left')  # outer
             .collect()
             .pipe(self.aggregate_depth_1, 'credit_bureau_b_1')
             .lazy()
@@ -934,7 +982,8 @@ class CreditRiskProcessing:
             dataframes_credit_bureau_a_2.append(q.collect())
 
         # Concat the dataframes
-        query_credit_bureau_a_2 = pl.concat(dataframes_credit_bureau_a_2, how='vertical_relaxed')
+        query_credit_bureau_a_2 = pl.concat(dataframes_credit_bureau_a_2, how='vertical_relaxed').lazy()
+        del dataframes_credit_bureau_a_2
 
         dataframes_credit_bureau_a_1 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_1*.parquet')):
@@ -943,16 +992,27 @@ class CreditRiskProcessing:
                 pl.read_parquet(file)
                 .lazy()
                 .pipe(self.set_table_dtypes)
-                .pipe(self.encode_categorical_columns, 'credit_bureau_a_2')
+                .pipe(self.encode_categorical_columns, 'credit_bureau_a_1')
+                .join(query_credit_bureau_a_2, on=["case_id", "num_group1"], how='left')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'credit_bureau_a_1')
+                .lazy()
             )
             dataframes_credit_bureau_a_1.append(q.collect())
 
         # Concat the dataframes
         query_credit_bureau_a_1 = pl.concat(dataframes_credit_bureau_a_1, how='vertical_relaxed')
+        del dataframes_credit_bureau_a_1
+
+        # Join with base
+        query_base = query_base.join(query_credit_bureau_a_1, on="case_id", how=howtojoin)
+
+        # Fill all null values and NaN values with 0
+        query_base = query_base.fill_null(0).fill_nan(0)   # .with_columns(cs.numeric().replace(float("inf"),0.0))
 
 
-        
-        return query_credit_bureau_a_1 # query_base
+        return query_base # query_base
+
 
 # Main function here
 if __name__ == "__main__":
