@@ -264,6 +264,95 @@ class CreditRiskProcessing:
                 pl.col("subjectrole_93M").replace(predata.subjectrole_93M_frequency, default=None).alias("subjectrole_93M_frequency"),
             )
 
+        if table_name=='person_1':
+
+            persontype_1072L_unique = [1.0,4.0,5.0]
+            education_927M_unique = ['P17_36_170', 'a55475b1', 'P106_81_188', 'P97_36_170', 'P157_18_172', 'P33_146_175']
+            empl_employedtotal_800L_unique = ['MORE_FIVE','LESS_ONE','MORE_ONE']
+            empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
+            familystate_447L_unique = ['DIVORCED','WIDOWED','MARRIED','SINGLE', 'LIVING_WITH_PARTNER']
+
+            # Adding new columns
+            data = data.with_columns(
+                # Each value in the column contaddr_district_15M is a string which has a typical entry as 'P202_53_125'. We transform the data in this column by splitting the string by '_' and keeping the first element
+                pl.col("contaddr_district_15M").replace({"a55475b1":None}).str.split_exact('_',n=2).struct.rename_fields(["f1", "f2", "f3"]).alias("fields"),
+
+                pl.col("contaddr_zipcode_807M").replace({"a55475b1":None}).str.split_exact('_',n=2).struct.rename_fields(["z1", "z2", "z3"]).alias("fields_zip"),
+
+                pl.col("empladdr_zipcode_114M").replace({"a55475b1":None}).str.split_exact('_',n=2).struct.rename_fields(["ez1", "ez2", "ez3"]).alias("fields_empzip"),
+
+
+            ).unnest("fields").unnest("fields_zip").unnest("fields_empzip").drop(
+                ["f2", "f3","fields","contaddr_district_15M","z2","z3","fields_zip","contaddr_zipcode_807M","empladdr_zipcode_114M","ez2", "ez3", "fields_empzip"]
+            ).rename(
+                {
+                    "f1": "contaddr_district_15M",
+                    "z1": "contaddr_zipcode_807M",
+                    "ez1": "empladdr_zipcode_114M",
+                }
+            ).with_columns(
+
+                # Add columns as one-hot-encoded values of persontype_1072L
+                *[pl.col("persontype_1072L").eq(perstype).cast(pl.Int16).alias(f"persontype_1072L_{str(perstype)}") for perstype in persontype_1072L_unique],
+                pl.col('persontype_1072L').is_null().cast(pl.Int16).alias('persontype_1072L_null'),
+
+                # Add columns as one-hot-encoded values of persontype_792L
+                *[pl.col("persontype_792L").eq(perstype).cast(pl.Int16).alias(f"persontype_792L_{str(perstype)}") for perstype in predata.persontype_792L_unique],
+                pl.col('persontype_792L').is_null().cast(pl.Int16).alias('persontype_792L_null'),
+
+                # one-hot-encoded values of education_927M
+                *[pl.col("education_927M").eq(edu).cast(pl.Int16).alias(f"education_927M_{edu}") for edu in education_927M_unique],
+
+                # one-hot-encoded for empl_employedtotal_800L
+                *[pl.col("empl_employedtotal_800L").eq(empl).cast(pl.Int16).alias(f"empl_employedtotal_800L_{empl}") for empl in empl_employedtotal_800L_unique],
+
+                # one-hot-encoded columns for empl_industry_691L
+                *[pl.col("empl_industry_691L").eq(empl).cast(pl.Int16).alias(f"empl_industry_691L_{empl}") for empl in empl_industry_691L_unique],
+                
+                # one-hot-encoded columns for familystate_447L
+                *[pl.col("familystate_447L").eq(familystate).cast(pl.Int16).alias(f"familystate_447L_{familystate}") for familystate in familystate_447L_unique],
+
+                # one-hot-encoded gender_992L
+                pl.col("gender_992L").eq('M').cast(pl.Int16).alias("gender_992L_M"),
+                pl.col("gender_992L").eq('F').cast(pl.Int16).alias("gender_992L_F"),
+                #pl.col("gender_992L").is_null().cast(pl.Int16).alias("gender_992L_null"),
+
+
+                # Mean target and frequency
+                pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_mean_target, default=None).alias("persontype_1072L_mean_target"),
+                pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_frequency, default=None).alias("persontype_1072L_frequency"),
+                pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_mean_target, default=None).alias("persontype_792L_mean_target"),
+                pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_frequency, default=None).alias("persontype_792L_frequency"),
+
+                # Mean target and frequency for truncated columns
+                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_mean_target, default=None).alias("contaddr_district_15M_mean_target"),
+                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_frequency, default=None).alias("contaddr_district_15M_frequency"),
+
+                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_mean_target, default=None).alias("contaddr_zipcode_807M_mean_target"),
+                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_frequency, default=None).alias("contaddr_zipcode_807M_frequency"),
+
+                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_mean_target, default=None).alias("empladdr_zipcode_114M_mean_target"),
+                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_frequency, default=None).alias("empladdr_zipcode_114M_frequency"),
+
+
+                # Mean target and frequency
+                pl.col("education_927M").replace(predata.education_927M_mean_target, default=None).alias("education_927M_mean_target"),
+                pl.col("education_927M").replace(predata.education_927M_frequency, default=None).alias("education_927M_frequency"),
+
+                pl.col("empl_employedtotal_800L").fill_null('None').replace(predata.empl_employedtotal_800L_mean_target, default=None).alias("empl_employedtotal_800L_mean_target"),
+                pl.col("empl_employedtotal_800L").fill_null('None').replace(predata.empl_employedtotal_800L_frequency, default=None).alias("empl_employedtotal_800L_frequency"),
+
+                pl.col("empl_industry_691L").fill_null('None').replace(predata.empl_industry_691L_mean_target, default=None).alias("empl_industry_691L_mean_target"),
+                pl.col("empl_industry_691L").fill_null('None').replace(predata.empl_industry_691L_frequency, default=None).alias("empl_industry_691L_frequency"),
+
+                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_mean_target, default=None).alias("empladdr_district_926M_mean_target"),
+                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_frequency, default=None).alias("empladdr_district_926M_frequency"),
+
+                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_mean_target, default=None).alias("familystate_447L_mean_target")
+                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_frequency, default=None).alias("familystate_447L_frequency")
+
+            )
+
         return data
     
     
@@ -901,6 +990,83 @@ class CreditRiskProcessing:
 
             )
 
+        if table_name=='person_1':
+
+            # One-hot-encoded features
+            persontype_1072L_unique = [1.0,4.0,5.0]
+            education_927M_unique = ['P17_36_170', 'a55475b1', 'P106_81_188', 'P97_36_170', 'P157_18_172', 'P33_146_175']
+            empl_employedtotal_800L_unique = ['MORE_FIVE','LESS_ONE','MORE_ONE']
+            empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
+            empl_industry_691L_unstable = ['CHARITY_RELIGIOUS','GAMING','RECRUITMENT','WELNESS','TOURISM','AGRICULTURE','TRADE','REAL_ESTATE']
+            familystate_447L_unique = ['DIVORCED','WIDOWED','MARRIED','SINGLE', 'LIVING_WITH_PARTNER']
+
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+
+                # Select first non-null value of childnum_185L
+                pl.col('childnum_185L').first().fill_null(0).cast(pl.Int16).alias('childnum_185L'),
+
+                # Number of persons indicated in the application form
+                pl.when( pl.col('personindex_1023L').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_personindex_1023L"),
+
+                # Sum of one-hot-encoded columns
+                *[pl.col(f"persontype_1072L_{str(perstype)}").sum().cast(pl.Int16).alias(f"persontype_{str(perstype)}_1072L") for perstype in persontype_1072L_unique],
+                pl.col('persontype_1072L_null').sum().cast(pl.Int16).alias('persontype_null_1072L'),
+                *[pl.col(f"persontype_792L_{str(perstype)}").sum().cast(pl.Int16).alias(f"persontype_{str(perstype)}_792L") for perstype in persontype_1072L_unique],
+                pl.col('persontype_792L_null').sum().cast(pl.Int16).alias('persontype_null_792L'),
+
+                # Sum of one-hot-encoded columns
+                *[pl.col(f"education_927M_{edu}").sum().cast(pl.Int16).alias(f"education_{edu}_927M") for edu in education_927M_unique],
+
+                # Sum of one-hot-encoded columns
+                *[pl.col(f"empl_employedtotal_800L_{empl}").sum().cast(pl.Int16).alias(f"employedtotal_{empl}_800L") for empl in empl_employedtotal_800L_unique],
+
+                # First of one-hot-encoded columns
+                *[pl.col(f"empl_industry_691L_{empl}").sum().cast(pl.Int16).alias(f"empl_industry_{empl}_691L") for empl in empl_industry_691L_unique],
+
+                # 1 if empl_industry_691L value is in list empl_industry_691L_unstable, otherwise 0
+                pl.col('empl_industry_691L').first().is_in(empl_industry_691L_unstable).cast(pl.Int16).alias('empl_industry_691L_unstable'),
+
+                # First of one-hot-encoded column familystate_447L
+                *[pl.col(f"familystate_447L_{familystate}").first().cast(pl.Int16).alias(f"familystate_{familystate}_447L") for familystate in familystate_447L_unique]
+
+                # one-hot-encoded gender_992L
+                pl.col("gender_992L_M").first().fill_null(0).cast(pl.Int16).alias("gender_992L_M"),
+                pl.col("gender_992L_F").first().fill_null(0).cast(pl.Int16).alias("gender_992L_F"),
+                #pl.col("gender_992L_null").first().fill_null(0).cast(pl.Int16).alias("gender_992L_null"),
+
+
+                
+
+                # Date of birth: select the first non-null value. TODO: both columns should be combine in one as they have the same date
+                pl.col('birth_259D').max().alias('birth_259D'),
+                pl.col('birthdate_87D').max().alias('birthdate_87D'),
+
+
+                # Encoded addresses (categorical)
+                pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("contaddr_district_15M"),
+                pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("contaddr_zipcode_807M"),
+                pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("empladdr_zipcode_114M"),
+
+                pl.col("contaddr_matchlist_1032L").first().cast(pl.Int8).alias("contaddr_matchlist_1032L"),
+                pl.col("contaddr_smempladdr_334L").first().cast(pl.Int8).alias("contaddr_smempladdr_334L"),
+
+                # is employed?
+                pl.when( pl.col('empl_employedfrom_271D').first().is_not_null() ).then(1).otherwise(0).cast(pl.Int8).alias("empl_employedfrom_271D_isemployed"),
+                # Date of employment
+                pl.col("empl_employedfrom_271D").first().alias("empl_employedfrom_271D"),
+
+
+                
+
+
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+
+            )
+
         return data
 
     def add_target(self, data: pl.DataFrame, train_basetable: pl.DataFrame) -> pl.DataFrame:
@@ -933,9 +1099,9 @@ class CreditRiskProcessing:
         }
 
 
-        # Reimplementation of reading and processing logic to benefit from lazy frames
 
         # Read the parquet files, concat, process, aggregate and join them in chains
+        #############################################################
         # Step 1: credit_bureau_b_2 -> credit_bureau_b_1 -> base
         query_credit_bureau_b_2 = (
             pl.read_parquet(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_b_2*.parquet')
@@ -966,7 +1132,7 @@ class CreditRiskProcessing:
             .collect()
         )
 
-
+        #############################################################
         # Step 2: credit_bureau_b_2 -> credit_bureau_b_1 -> base
         dataframes_credit_bureau_a_2 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_2*.parquet')):
@@ -1006,6 +1172,47 @@ class CreditRiskProcessing:
 
         # Join with base
         query_base = query_base.join(query_credit_bureau_a_1, on="case_id", how=howtojoin)
+
+        #############################################################
+        # Step 3: person_2 -> person_1 -> base
+        dataframes_person_2 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_person_2*.parquet')):
+            if ifile>1: continue
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'person_2')
+                .pipe(self.aggregate_depth_2, 'person_2')
+                .lazy()
+            )
+            dataframes_person_2.append(q.collect())
+
+        # Concat the dataframes
+        query_person_2 = pl.concat(dataframes_person_2, how='vertical_relaxed').lazy()
+        del dataframes_person_2
+
+        dataframes_person_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_person_1*.parquet')):
+            if ifile>1: continue
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'person_1')
+                .join(query_person_2, on=["case_id", "num_group1"], how='left')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'person_1')
+                .lazy()
+            )
+            dataframes_person_1.append(q.collect())
+
+        # Concat the dataframes
+        query_person_1 = pl.concat(dataframes_person_1, how='vertical_relaxed')
+        del dataframes_person_1
+
+
+
 
         # Fill all null values and NaN values with 0
         query_base = query_base.fill_null(0).fill_nan(0)   # .with_columns(cs.numeric().replace(float("inf"),0.0))
