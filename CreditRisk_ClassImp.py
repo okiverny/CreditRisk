@@ -271,6 +271,9 @@ class CreditRiskProcessing:
             empl_employedtotal_800L_unique = ['MORE_FIVE','LESS_ONE','MORE_ONE']
             empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
             familystate_447L_unique = ['DIVORCED','WIDOWED','MARRIED','SINGLE', 'LIVING_WITH_PARTNER']
+            incometype_1044T_unique = ['SALARIED_GOVT', 'HANDICAPPED_2', 'EMPLOYED', 'PRIVATE_SECTOR_EMPLOYEE', 'SELFEMPLOYED', 'HANDICAPPED', 'RETIRED_PENSIONER', 'HANDICAPPED_3', 'OTHER']
+            language1_981M_unique = ['P209_127_106', 'P10_39_147']
+            relationshiptoclient_unique = ['SIBLING', 'NEIGHBOR', 'FRIEND', 'OTHER_RELATIVE', 'CHILD', 'OTHER', 'GRAND_PARENT','PARENT', 'SPOUSE', 'COLLEAGUE']
 
             # Adding new columns
             data = data.with_columns(
@@ -297,7 +300,7 @@ class CreditRiskProcessing:
                 pl.col('persontype_1072L').is_null().cast(pl.Int16).alias('persontype_1072L_null'),
 
                 # Add columns as one-hot-encoded values of persontype_792L
-                *[pl.col("persontype_792L").eq(perstype).cast(pl.Int16).alias(f"persontype_792L_{str(perstype)}") for perstype in predata.persontype_792L_unique],
+                *[pl.col("persontype_792L").eq(perstype).cast(pl.Int16).alias(f"persontype_792L_{str(perstype)}") for perstype in persontype_1072L_unique],
                 pl.col('persontype_792L').is_null().cast(pl.Int16).alias('persontype_792L_null'),
 
                 # one-hot-encoded values of education_927M
@@ -311,18 +314,32 @@ class CreditRiskProcessing:
                 
                 # one-hot-encoded columns for familystate_447L
                 *[pl.col("familystate_447L").eq(familystate).cast(pl.Int16).alias(f"familystate_447L_{familystate}") for familystate in familystate_447L_unique],
+                *[pl.col("maritalst_703L").eq(familystate).cast(pl.Int16).alias(f"maritalst_703L_{familystate}") for familystate in familystate_447L_unique],
 
-                # one-hot-encoded gender_992L
-                pl.col("gender_992L").eq('M').cast(pl.Int16).alias("gender_992L_M"),
-                pl.col("gender_992L").eq('F').cast(pl.Int16).alias("gender_992L_F"),
+                # one-hot-encoded columns for incometype_1044T
+                *[pl.col("incometype_1044T").eq(incometype).cast(pl.Int16).alias(f"incometype_1044T_{incometype}") for incometype in incometype_1044T_unique],
+
+                # one-hot-encoded columns for language1_981M
+                *[pl.col("language1_981M").eq(language).cast(pl.Int16).alias(f"language1_981M_{language}") for language in language1_981M_unique],
+
+                # one-hot-encoded columns for relationshiptoclient_415T and relationshiptoclient_642T
+                *[pl.col("relationshiptoclient_415T").eq(rel).cast(pl.Int16).alias(f"relationshiptoclient_415T_{rel}") for rel in relationshiptoclient_unique],
+                *[pl.col("relationshiptoclient_642T").eq(rel).cast(pl.Int16).alias(f"relationshiptoclient_642T_{rel}") for rel in relationshiptoclient_unique],
+
+
+                # one-hot-encoded gender_992L and sex_738L
+                #pl.col("gender_992L").eq('M').cast(pl.Int16).alias("gender_992L_M"),
+                #pl.col("gender_992L").eq('F').cast(pl.Int16).alias("gender_992L_F"),
                 #pl.col("gender_992L").is_null().cast(pl.Int16).alias("gender_992L_null"),
+                #pl.col("sex_738L").eq('M').cast(pl.Int16).alias("sex_738L_M"),
+                #pl.col("sex_738L").eq('F').cast(pl.Int16).alias("sex_738L_F"),
 
 
-                # Mean target and frequency
-                pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_mean_target, default=None).alias("persontype_1072L_mean_target"),
-                pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_frequency, default=None).alias("persontype_1072L_frequency"),
-                pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_mean_target, default=None).alias("persontype_792L_mean_target"),
-                pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_frequency, default=None).alias("persontype_792L_frequency"),
+                # Mean target and frequency (TODO: error on these because of replace)
+                #pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_mean_target, default=None).alias("persontype_1072L_mean_target"),
+                #pl.col("persontype_1072L").fill_null('None').replace(predata.persontype_1072L_frequency, default=None).alias("persontype_1072L_frequency"),
+                #pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_mean_target, default=None).alias("persontype_792L_mean_target"),
+                #pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_frequency, default=None).alias("persontype_792L_frequency"),
 
                 # Mean target and frequency for truncated columns
                 pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_mean_target, default=None).alias("contaddr_district_15M_mean_target"),
@@ -348,10 +365,38 @@ class CreditRiskProcessing:
                 pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_mean_target, default=None).alias("empladdr_district_926M_mean_target"),
                 pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_frequency, default=None).alias("empladdr_district_926M_frequency"),
 
-                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_mean_target, default=None).alias("familystate_447L_mean_target")
-                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_frequency, default=None).alias("familystate_447L_frequency")
+                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_mean_target, default=None).alias("familystate_447L_mean_target"),
+                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_frequency, default=None).alias("familystate_447L_frequency"),
 
-            )
+                pl.col("housetype_905L").fill_null('None').replace(predata.housetype_905L_mean_target, default=None).alias("housetype_905L_mean_target"),
+                #pl.col("housetype_905L").fill_null('None').replace(predata.housetype_905L_frequency, default=None).alias("housetype_905L_frequency"),
+
+                pl.col("housingtype_772L").fill_null('None').replace(predata.housingtype_772L_mean_target, default=None).alias("housingtype_772L_mean_target"),
+                #pl.col("housingtype_772L").fill_null('None').replace(predata.housingtype_772L_frequency, default=None).alias("housingtype_772L_frequency"),
+
+                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_mean_target, default=None).alias("incometype_1044T_mean_target"),
+                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_frequency, default=None).alias("incometype_1044T_frequency"),
+
+                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_mean_target, default=None).alias("language1_981M_mean_target"),
+                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_frequency, default=None).alias("language1_981M_frequency"),
+
+                pl.col("role_1084L").fill_null('None').replace(predata.role_1084L_mean_target, default=None).alias("role_1084L_mean_target"),
+                #pl.col("role_1084L").fill_null('None').replace(predata.role_1084L_frequency, default=None).alias("role_1084L_frequency"),
+
+                pl.col("type_25L").fill_null('None').replace(predata.type_25L_mean_target, default=None).alias("type_25L_mean_target"),
+                pl.col("type_25L").fill_null('None').replace(predata.type_25L_frequency, default=None).alias("type_25L_frequency"),
+
+
+                # Categorical (many categories to int)
+                pl.col("registaddr_district_1083M").replace(predata.registaddr_district_1083M_idx, default=0).alias("registaddr_district_1083M"),
+
+
+
+            ).with_columns(
+                # average between housetype_905L_mean_target and housetype_905L_mean_target
+                (pl.col("housetype_905L_mean_target") + pl.col("housingtype_772L_mean_target")).mul(0.5).alias("housetype_905L_772L_mean_target"),
+                
+            ).drop(["housetype_905L_mean_target","housetype_905L_mean_target"])
 
         return data
     
@@ -620,8 +665,9 @@ class CreditRiskProcessing:
 
 
                 # A binary feature indicating whether a column has at least one missing value (null)
-                (pl.col("amount_1115A").is_null()).any().alias("amount_1115A_null"),
-                (pl.col("totalamount_881A").is_null()).any().alias("totalamount_881A_null"),
+                # TODO: cast bool to int16?
+                (pl.col("amount_1115A").is_null()).any().cast(pl.Int16).alias("amount_1115A_null"),
+                (pl.col("totalamount_881A").is_null()).any().cast(pl.Int16).alias("totalamount_881A_null"),
                 
                 # Credit Utilization Ratio: ratio of amount_1115A to totalamount_503A 
                 (pl.col("amount_1115A") / pl.col("totalamount_503A")).fill_null(0.0).replace(float("inf"),0.0).max().alias("amount_1115A_totalamount_503A_ratio_max"),
@@ -659,7 +705,7 @@ class CreditRiskProcessing:
                 # Create a binary feature indicating whether the maximum debt occurred recently (e.g., within the last month or quarter) based on maxdebtpduevalodued_3940955A
                 (pl.col("maxdebtpduevalodued_3940955A").filter(
                         (pl.col("maxdebtpduevalodued_3940955A").is_not_null()) & (pl.col("maxdebtpduevalodued_3940955A").gt(0.0))
-                    ).min() < 120.0).fill_null(False).alias("maxdebtpduevalodued_3940955A_isrecent"),
+                    ).min() < 120.0).fill_null(False).cast(pl.Int16).alias("maxdebtpduevalodued_3940955A_isrecent"),
 
                 # TODO Debt-to-Income Ratio: Divide the outstanding debt amount (debtvalue_227A) by the client’s income (if available). This ratio provides insights into a client’s ability to manage debt relative to their income.
 
@@ -999,6 +1045,9 @@ class CreditRiskProcessing:
             empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
             empl_industry_691L_unstable = ['CHARITY_RELIGIOUS','GAMING','RECRUITMENT','WELNESS','TOURISM','AGRICULTURE','TRADE','REAL_ESTATE']
             familystate_447L_unique = ['DIVORCED','WIDOWED','MARRIED','SINGLE', 'LIVING_WITH_PARTNER']
+            incometype_1044T_unique = ['SALARIED_GOVT', 'HANDICAPPED_2', 'EMPLOYED', 'PRIVATE_SECTOR_EMPLOYEE', 'SELFEMPLOYED', 'HANDICAPPED', 'RETIRED_PENSIONER', 'HANDICAPPED_3', 'OTHER']
+            language1_981M_unique = ['P209_127_106', 'P10_39_147']
+            relationshiptoclient_unique = ['SIBLING', 'NEIGHBOR', 'FRIEND', 'OTHER_RELATIVE', 'CHILD', 'OTHER', 'GRAND_PARENT','PARENT', 'SPOUSE', 'COLLEAGUE']
 
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
@@ -1027,15 +1076,28 @@ class CreditRiskProcessing:
                 # 1 if empl_industry_691L value is in list empl_industry_691L_unstable, otherwise 0
                 pl.col('empl_industry_691L').first().is_in(empl_industry_691L_unstable).cast(pl.Int16).alias('empl_industry_691L_unstable'),
 
-                # First of one-hot-encoded column familystate_447L
-                *[pl.col(f"familystate_447L_{familystate}").first().cast(pl.Int16).alias(f"familystate_{familystate}_447L") for familystate in familystate_447L_unique]
+                # First of one-hot-encoded column familystate_447L (TODO: pl.col(col).drop_nulls().first() if creating other features)
+                #*[pl.col(f"familystate_447L_{familystate}").sum().cast(pl.Int16).alias(f"familystate_{familystate}_447L") for familystate in familystate_447L_unique]
+                *[( pl.col(f"familystate_447L_{familystate}") + pl.col(f"maritalst_703L_{familystate}") ).sum().cast(pl.Int16).alias(f"familystate_{familystate}_447L") for familystate in familystate_447L_unique],
 
-                # one-hot-encoded gender_992L
-                pl.col("gender_992L_M").first().fill_null(0).cast(pl.Int16).alias("gender_992L_M"),
-                pl.col("gender_992L_F").first().fill_null(0).cast(pl.Int16).alias("gender_992L_F"),
+                # one-hot-encoded columns for relationshiptoclient_415T and relationshiptoclient_642T
+                *[( pl.col(f"relationshiptoclient_415T_{rel}") + pl.col(f"relationshiptoclient_642T_{rel}") ).sum().cast(pl.Int16).alias(f"relationshiptoclient_{rel}_415T") for rel in relationshiptoclient_unique],
+
+
+                # one-hot-encoded gender_992L and sex_738L
+                #pl.col("gender_992L_M").first().fill_null(0).cast(pl.Int16).alias("gender_992L_M"),
+                #pl.col("gender_992L_F").first().fill_null(0).cast(pl.Int16).alias("gender_992L_F"),
                 #pl.col("gender_992L_null").first().fill_null(0).cast(pl.Int16).alias("gender_992L_null"),
+                #pl.col("sex_738L_M").first().fill_null(0).cast(pl.Int16).alias("sex_738L_M"),
+                #pl.col("sex_738L_F").first().fill_null(0).cast(pl.Int16).alias("sex_738L_F"),
 
+                pl.col("sex_738L").drop_nulls().first().replace({"F": 0, "M": 1}, default=None).cast(pl.Int16).alias('sex_738L'),
 
+                # one-hot-encoded columns for incometype_1044T
+                *[pl.col(f"incometype_1044T_{incometype}").sum().cast(pl.Int16).alias(f"incometype_{incometype}_1044T") for incometype in incometype_1044T_unique],
+                
+                # one-hot-encoded columns for language1_981M
+                *[pl.col(f"language1_981M_{language}").sum().cast(pl.Int16).alias(f"language1_{language}_981M") for language in language1_981M_unique],
                 
 
                 # Date of birth: select the first non-null value. TODO: both columns should be combine in one as they have the same date
@@ -1048,16 +1110,29 @@ class CreditRiskProcessing:
                 pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("contaddr_zipcode_807M"),
                 pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("empladdr_zipcode_114M"),
 
-                pl.col("contaddr_matchlist_1032L").first().cast(pl.Int8).alias("contaddr_matchlist_1032L"),
-                pl.col("contaddr_smempladdr_334L").first().cast(pl.Int8).alias("contaddr_smempladdr_334L"),
+                pl.col("contaddr_matchlist_1032L").first().cast(pl.Int16).alias("contaddr_matchlist_1032L"),
+                pl.col("contaddr_smempladdr_334L").first().cast(pl.Int16).alias("contaddr_smempladdr_334L"),
 
                 # is employed?
-                pl.when( pl.col('empl_employedfrom_271D').first().is_not_null() ).then(1).otherwise(0).cast(pl.Int8).alias("empl_employedfrom_271D_isemployed"),
+                pl.when( pl.col('empl_employedfrom_271D').drop_nulls().first().is_not_null() ).then(1).otherwise(0).cast(pl.Int16).alias("empl_employedfrom_271D_isemployed"),
                 # Date of employment
-                pl.col("empl_employedfrom_271D").first().alias("empl_employedfrom_271D"),
+                pl.col("empl_employedfrom_271D").drop_nulls().first().alias("empl_employedfrom_271D"),
+
+                # Main income amount (TODO: more features are possible)
+                pl.col("mainoccupationinc_384A").drop_nulls().first().fill_null(0.0).alias("mainoccupationinc_384A"),
 
 
-                
+                # Categorical with many categories (encoded to it by hand) - registaddr_zipcode_184M ignored
+                pl.col("registaddr_district_1083M").first().alias("registaddr_district_1083M"),
+
+                # Bool type remitter_829L
+                pl.col("remitter_829L").drop_nulls().first().fill_null(-1).cast(pl.Int16).alias("remitter_829L"),
+
+                # Bool type safeguarantyflag_411L
+                pl.col("safeguarantyflag_411L").drop_nulls().first().fill_null(-1).cast(pl.Int16).alias("safeguarantyflag_411L"),
+
+                # Number of type_25L indicated
+                pl.when( pl.col('type_25L').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_type_25L"),
 
 
                 # Various mean_target columns
@@ -1065,9 +1140,38 @@ class CreditRiskProcessing:
                 # Various frequency columns
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
 
-            )
+                # Columns from person_2 table
+
+
+                # Number of non-null related person roles indicated
+                pl.col('num_related_persons').sum().fill_null(0).alias('num_related_persons'),
+                # The most influential role
+                pl.col('most_influential_role').max().fill_null(0).alias('most_influential_role'),
+                # Start date of employment
+                pl.col("empls_employedfrom_796D").drop_nulls().first().alias('empls_employedfrom_796D')
+
+            ).with_columns(
+                pl.max_horizontal(pl.col('empls_employedfrom_796D'), pl.col('empl_employedfrom_271D')).alias('empls_employedfrom_796D_271D'),
+                pl.max_horizontal(pl.col('birth_259D'), pl.col('birthdate_87D')).alias('birth_259D_87D'),
+
+            ).drop(['empls_employedfrom_796D','empl_employedfrom_271D','birth_259D','birthdate_87D'])
+            # Ignored: isreference_387L,registaddr_zipcode_184M,role_993L
+
 
         return data
+    
+    def add_date_features(self, data: pl.DataFrame, ref_date: str, date_cols: list) -> pl.DataFrame:
+        """
+        Add date features to the DataFrame:
+        - data: DataFrame to add date features to
+        - return: DataFrame with date features added
+        """
+        data = data.with_columns(                
+                *[ (pl.col(ref_date) - pl.col(col)).dt.total_days().fill_null(0.0).alias(col) for col in date_cols ],
+        ).drop(ref_date)
+
+        return data
+                
 
     def add_target(self, data: pl.DataFrame, train_basetable: pl.DataFrame) -> pl.DataFrame:
         """
@@ -1099,6 +1203,7 @@ class CreditRiskProcessing:
         }
 
 
+        howtojoin = 'left' if self.data_type=='test' else 'inner'
 
         # Read the parquet files, concat, process, aggregate and join them in chains
         #############################################################
@@ -1124,7 +1229,6 @@ class CreditRiskProcessing:
             .lazy()
         )
 
-        howtojoin = 'left' if self.data_type=='test' else 'inner'
         query_base = (
             pl.read_parquet(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_base.parquet')
             .lazy()
@@ -1211,8 +1315,27 @@ class CreditRiskProcessing:
         query_person_1 = pl.concat(dataframes_person_1, how='vertical_relaxed')
         del dataframes_person_1
 
+        # Join with base
+        query_base = query_base.join(query_person_1, on="case_id", how=howtojoin)
+
+        #############################################################
 
 
+
+
+        # Process the pl.Date columns
+        # date features to be transformed from pl.Date using reference date
+        date_cols = ['empls_employedfrom_796D_271D','birth_259D_87D','refreshdate_3813885D_max']
+        date_ref = 'date_decision'    # refreshdate_3813885D_max
+
+        # Convert 'date_decision' to pl.Date
+        query_base = query_base.with_columns(pl.col('date_decision').str.strptime(pl.Date, "%Y-%m-%d").alias('date_decision'))
+        query_base = query_base.pipe(self.add_date_features, date_ref, date_cols)
+
+        # Remove all-null-rows in train data
+        if self.data_type=='train':
+           cols_pred = [col for col in query_base.columns if col not in ['target','case_id','WEEK_NUM','MONTH','date_decision']]
+           query_base = query_base.filter(~pl.all_horizontal(pl.col(*cols_pred).is_null()))
 
         # Fill all null values and NaN values with 0
         query_base = query_base.fill_null(0).fill_nan(0)   # .with_columns(cs.numeric().replace(float("inf"),0.0))
@@ -1231,6 +1354,9 @@ if __name__ == "__main__":
 
     # Load the data
     data_store = cr.load_data_and_process()
+
+    # Drop the rows with null values
+    data_store = cr.drop_null_rows(data_store)
 
     # Create the features
     features = cr.create_features(data_store)
