@@ -108,8 +108,8 @@ class CreditRiskProcessing:
                 pl.col("addres_district_368M").replace(predata.addres_district_368M_mean_target, default=None).alias("addres_district_mean_target"),
                 pl.col("addres_district_368M").replace(predata.addres_district_368M_frequency, default=None).alias("addres_district_frequency"),
 
-                pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_mean_target, default=None).alias("addres_role_mean_target"),
-                pl.col("addres_role_871L").fill_null('None').replace(predata.addres_role_871L_frequency, default=None).alias("addres_role_frequency"),
+                pl.col("addres_role_871L").cast(pl.String).fill_null('None').replace(predata.addres_role_871L_mean_target, default=None).alias("addres_role_mean_target"),
+                pl.col("addres_role_871L").cast(pl.String).fill_null('None').replace(predata.addres_role_871L_frequency, default=None).alias("addres_role_frequency"),
 
                 pl.col("addres_zip_823M").replace(predata.addres_zip_823M_mean_target, default=None).alias("addres_zip_mean_target"),
                 pl.col("addres_zip_823M").replace(predata.addres_zip_823M_frequency, default=None).alias("addres_zip_frequency"),
@@ -136,18 +136,18 @@ class CreditRiskProcessing:
             # Adding new columns
             data = data.with_columns(
                 # Categorical ordered encoding
-                pl.col("conts_type_509L").replace(predata.conts_type_509L_encoding, default=None).alias("conts_type_encoded"),
-                pl.col("credacc_cards_status_52L").replace(predata.credacc_cards_status_52L_encoding, default=None).alias("credacc_cards_status_encoded"),
+                pl.col("conts_type_509L").cast(pl.String).replace(predata.conts_type_509L_encoding, default=None).alias("conts_type_encoded"),
+                pl.col("credacc_cards_status_52L").cast(pl.String).replace(predata.credacc_cards_status_52L_encoding, default=None).alias("credacc_cards_status_encoded"),
                 pl.col("cacccardblochreas_147M").replace(predata.cacccardblochreas_147M_encoding, default=None).alias("cacccardblochreas_encoded"),
 
-                pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_mean_target, default=None).alias("conts_type_mean_target"),
-                pl.col("conts_type_509L").fill_null('None').replace(predata.conts_type_509L_frequency, default=None).alias("conts_type_frequency"),
+                pl.col("conts_type_509L").cast(pl.String).fill_null('None').replace(predata.conts_type_509L_mean_target, default=None).alias("conts_type_mean_target"),
+                pl.col("conts_type_509L").cast(pl.String).fill_null('None').replace(predata.conts_type_509L_frequency, default=None).alias("conts_type_frequency"),
 
-                pl.col("credacc_cards_status_52L").fill_null('None').replace(predata.credacc_cards_status_52L_mean_target, default=None).alias("credacc_cards_status_mean_target"),
-                pl.col("credacc_cards_status_52L").fill_null('None').replace(predata.credacc_cards_status_52L_frequency, default=None).alias("credacc_cards_status_frequency"),
+                pl.col("credacc_cards_status_52L").cast(pl.String).fill_null('None').replace(predata.credacc_cards_status_52L_mean_target, default=None).alias("credacc_cards_status_mean_target"),
+                pl.col("credacc_cards_status_52L").cast(pl.String).fill_null('None').replace(predata.credacc_cards_status_52L_frequency, default=None).alias("credacc_cards_status_frequency"),
 
-                pl.col("cacccardblochreas_147M").fill_null('None').replace(predata.cacccardblochreas_147M_mean_target, default=None).alias("cacccardblochreas_147M_mean_target"),
-                pl.col("cacccardblochreas_147M").fill_null('None').replace(predata.cacccardblochreas_147M_frequency, default=None).alias("cacccardblochreas_147M_frequency"),
+                pl.col("cacccardblochreas_147M").cast(pl.String).fill_null('None').replace(predata.cacccardblochreas_147M_mean_target, default=None).alias("cacccardblochreas_147M_mean_target"),
+                pl.col("cacccardblochreas_147M").cast(pl.String).fill_null('None').replace(predata.cacccardblochreas_147M_frequency, default=None).alias("cacccardblochreas_147M_frequency"),
             )
 
             drop_columns = ["conts_type_509L", "credacc_cards_status_52L", "cacccardblochreas_147M"]
@@ -195,9 +195,9 @@ class CreditRiskProcessing:
 
         if table_name=='credit_bureau_b_1':
             data = data.with_columns(
-                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_mean_target, default=None).alias("periodicityofpmts_997L_mean_target"),
-                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_frequency, default=None).alias("periodicityofpmts_997L_frequency"),
-                pl.col("periodicityofpmts_997L").fill_null('None').replace(predata.periodicityofpmts_997L_interval, default=None).alias("periodicityofpmts_997L_interval"),
+                pl.col("periodicityofpmts_997L").cast(pl.String).fill_null('None').replace(predata.periodicityofpmts_997L_mean_target, default=None).alias("periodicityofpmts_997L_mean_target"),
+                pl.col("periodicityofpmts_997L").cast(pl.String).fill_null('None').replace(predata.periodicityofpmts_997L_frequency, default=None).alias("periodicityofpmts_997L_frequency"),
+                pl.col("periodicityofpmts_997L").cast(pl.String).fill_null('None').replace(predata.periodicityofpmts_997L_interval, default=None).alias("periodicityofpmts_997L_interval"),
 
                 pl.col("classificationofcontr_1114M").replace(predata.classificationofcontr_1114M_mean_target, default=None).alias("classificationofcontr_1114M_mean_target"),
                 pl.col("classificationofcontr_1114M").replace(predata.classificationofcontr_1114M_frequency, default=None).alias("classificationofcontr_1114M_frequency"),
@@ -266,7 +266,7 @@ class CreditRiskProcessing:
 
         if table_name=='person_1':
 
-            persontype_1072L_unique = [1.0,4.0,5.0]
+            persontype_1072L_unique = ['1.0','4.0','5.0']
             education_927M_unique = ['P17_36_170', 'a55475b1', 'P106_81_188', 'P97_36_170', 'P157_18_172', 'P33_146_175']
             empl_employedtotal_800L_unique = ['MORE_FIVE','LESS_ONE','MORE_ONE']
             empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
@@ -296,31 +296,31 @@ class CreditRiskProcessing:
             ).with_columns(
 
                 # Add columns as one-hot-encoded values of persontype_1072L
-                *[pl.col("persontype_1072L").eq(perstype).cast(pl.Int16).alias(f"persontype_1072L_{str(perstype)}") for perstype in persontype_1072L_unique],
+                *[pl.col("persontype_1072L").cast(pl.String).eq(perstype).cast(pl.Int16).alias(f"persontype_1072L_{str(perstype)}") for perstype in persontype_1072L_unique],
                 pl.col('persontype_1072L').is_null().cast(pl.Int16).alias('persontype_1072L_null'),
 
                 # Add columns as one-hot-encoded values of persontype_792L
-                *[pl.col("persontype_792L").eq(perstype).cast(pl.Int16).alias(f"persontype_792L_{str(perstype)}") for perstype in persontype_1072L_unique],
+                *[pl.col("persontype_792L").cast(pl.String).eq(perstype).cast(pl.Int16).alias(f"persontype_792L_{str(perstype)}") for perstype in persontype_1072L_unique],
                 pl.col('persontype_792L').is_null().cast(pl.Int16).alias('persontype_792L_null'),
 
                 # one-hot-encoded values of education_927M
                 *[pl.col("education_927M").eq(edu).cast(pl.Int16).alias(f"education_927M_{edu}") for edu in education_927M_unique],
 
                 # one-hot-encoded for empl_employedtotal_800L
-                *[pl.col("empl_employedtotal_800L").eq(empl).cast(pl.Int16).alias(f"empl_employedtotal_800L_{empl}") for empl in empl_employedtotal_800L_unique],
+                *[pl.col("empl_employedtotal_800L").cast(pl.String).eq(empl).cast(pl.Int16).alias(f"empl_employedtotal_800L_{empl}") for empl in empl_employedtotal_800L_unique],
 
                 # one-hot-encoded columns for empl_industry_691L
-                *[pl.col("empl_industry_691L").eq(empl).cast(pl.Int16).alias(f"empl_industry_691L_{empl}") for empl in empl_industry_691L_unique],
+                *[pl.col("empl_industry_691L").cast(pl.String).cast(pl.String).eq(empl).cast(pl.Int16).alias(f"empl_industry_691L_{empl}") for empl in empl_industry_691L_unique],
                 
                 # one-hot-encoded columns for familystate_447L
-                *[pl.col("familystate_447L").eq(familystate).cast(pl.Int16).alias(f"familystate_447L_{familystate}") for familystate in familystate_447L_unique],
-                *[pl.col("maritalst_703L").eq(familystate).cast(pl.Int16).alias(f"maritalst_703L_{familystate}") for familystate in familystate_447L_unique],
+                *[pl.col("familystate_447L").cast(pl.String).eq(familystate).cast(pl.Int16).alias(f"familystate_447L_{familystate}") for familystate in familystate_447L_unique],
+                *[pl.col("maritalst_703L").cast(pl.String).eq(familystate).cast(pl.Int16).alias(f"maritalst_703L_{familystate}") for familystate in familystate_447L_unique],
 
                 # one-hot-encoded columns for incometype_1044T
-                *[pl.col("incometype_1044T").eq(incometype).cast(pl.Int16).alias(f"incometype_1044T_{incometype}") for incometype in incometype_1044T_unique],
+                *[pl.col("incometype_1044T").cast(pl.String).eq(incometype).cast(pl.Int16).alias(f"incometype_1044T_{incometype}") for incometype in incometype_1044T_unique],
 
                 # one-hot-encoded columns for language1_981M
-                *[pl.col("language1_981M").eq(language).cast(pl.Int16).alias(f"language1_981M_{language}") for language in language1_981M_unique],
+                *[pl.col("language1_981M").cast(pl.String).eq(language).cast(pl.Int16).alias(f"language1_981M_{language}") for language in language1_981M_unique],
 
                 # one-hot-encoded columns for relationshiptoclient_415T and relationshiptoclient_642T
                 *[pl.col("relationshiptoclient_415T").eq(rel).cast(pl.Int16).alias(f"relationshiptoclient_415T_{rel}") for rel in relationshiptoclient_unique],
@@ -342,59 +342,59 @@ class CreditRiskProcessing:
                 #pl.col("persontype_792L").fill_null('None').replace(predata.persontype_792L_frequency, default=None).alias("persontype_792L_frequency"),
 
                 # Mean target and frequency for truncated columns
-                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_mean_target, default=None).alias("contaddr_district_15M_mean_target"),
-                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_frequency, default=None).alias("contaddr_district_15M_frequency"),
+                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_mean_target, default=None).cast(pl.Float64).alias("contaddr_district_15M_mean_target"),
+                pl.col("contaddr_district_15M").replace(predata.contaddr_district_15M_frequency, default=None).cast(pl.Int64).cast(pl.Int64).alias("contaddr_district_15M_frequency"),
 
-                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_mean_target, default=None).alias("contaddr_zipcode_807M_mean_target"),
-                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_frequency, default=None).alias("contaddr_zipcode_807M_frequency"),
+                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_mean_target, default=None).cast(pl.Float64).alias("contaddr_zipcode_807M_mean_target"),
+                pl.col("contaddr_zipcode_807M").replace(predata.contaddr_zipcode_807M_frequency, default=None).cast(pl.Int64).alias("contaddr_zipcode_807M_frequency"),
 
-                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_mean_target, default=None).alias("empladdr_zipcode_114M_mean_target"),
-                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_frequency, default=None).alias("empladdr_zipcode_114M_frequency"),
+                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_mean_target, default=None).cast(pl.Float64).alias("empladdr_zipcode_114M_mean_target"),
+                pl.col("empladdr_zipcode_114M").replace(predata.empladdr_zipcode_114M_frequency, default=None).cast(pl.Int64).alias("empladdr_zipcode_114M_frequency"),
 
 
                 # Mean target and frequency
-                pl.col("education_927M").replace(predata.education_927M_mean_target, default=None).alias("education_927M_mean_target"),
-                pl.col("education_927M").replace(predata.education_927M_frequency, default=None).alias("education_927M_frequency"),
+                pl.col("education_927M").replace(predata.education_927M_mean_target, default=None).cast(pl.Float64).alias("education_927M_mean_target"),
+                pl.col("education_927M").replace(predata.education_927M_frequency, default=None).cast(pl.Int64).alias("education_927M_frequency"),
 
-                pl.col("empl_employedtotal_800L").fill_null('None').replace(predata.empl_employedtotal_800L_mean_target, default=None).alias("empl_employedtotal_800L_mean_target"),
-                pl.col("empl_employedtotal_800L").fill_null('None').replace(predata.empl_employedtotal_800L_frequency, default=None).alias("empl_employedtotal_800L_frequency"),
+                pl.col("empl_employedtotal_800L").cast(pl.String).fill_null('None').replace(predata.empl_employedtotal_800L_mean_target, default=None).cast(pl.Float64).alias("empl_employedtotal_800L_mean_target"),
+                pl.col("empl_employedtotal_800L").cast(pl.String).fill_null('None').replace(predata.empl_employedtotal_800L_frequency, default=None).cast(pl.Int64).alias("empl_employedtotal_800L_frequency"),
 
-                pl.col("empl_industry_691L").fill_null('None').replace(predata.empl_industry_691L_mean_target, default=None).alias("empl_industry_691L_mean_target"),
-                pl.col("empl_industry_691L").fill_null('None').replace(predata.empl_industry_691L_frequency, default=None).alias("empl_industry_691L_frequency"),
+                pl.col("empl_industry_691L").cast(pl.String).fill_null('None').replace(predata.empl_industry_691L_mean_target, default=None).cast(pl.Float64).alias("empl_industry_691L_mean_target"),
+                pl.col("empl_industry_691L").cast(pl.String).fill_null('None').replace(predata.empl_industry_691L_frequency, default=None).cast(pl.Int64).alias("empl_industry_691L_frequency"),
 
-                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_mean_target, default=None).alias("empladdr_district_926M_mean_target"),
-                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_frequency, default=None).alias("empladdr_district_926M_frequency"),
+                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_mean_target, default=None).cast(pl.Float64).alias("empladdr_district_926M_mean_target"),
+                pl.col("empladdr_district_926M").replace(predata.empladdr_district_926M_frequency, default=None).cast(pl.Int64).alias("empladdr_district_926M_frequency"),
 
-                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_mean_target, default=None).alias("familystate_447L_mean_target"),
-                pl.col("familystate_447L").fill_null('None').replace(predata.familystate_447L_frequency, default=None).alias("familystate_447L_frequency"),
+                pl.col("familystate_447L").cast(pl.String).fill_null('None').replace(predata.familystate_447L_mean_target, default=None).cast(pl.Float64).alias("familystate_447L_mean_target"),
+                pl.col("familystate_447L").cast(pl.String).fill_null('None').replace(predata.familystate_447L_frequency, default=None).cast(pl.Int64).alias("familystate_447L_frequency"),
 
-                pl.col("housetype_905L").fill_null('None').replace(predata.housetype_905L_mean_target, default=None).alias("housetype_905L_mean_target"),
-                #pl.col("housetype_905L").fill_null('None').replace(predata.housetype_905L_frequency, default=None).alias("housetype_905L_frequency"),
+                pl.col("housetype_905L").cast(pl.String).fill_null('None').replace(predata.housetype_905L_mean_target, default=None).cast(pl.Float64).alias("housetype_905L_mean_target"),
+                #pl.col("housetype_905L").cast(pl.String).fill_null('None').replace(predata.housetype_905L_frequency, default=None).cast(pl.Int64).alias("housetype_905L_frequency"),
 
-                pl.col("housingtype_772L").fill_null('None').replace(predata.housingtype_772L_mean_target, default=None).alias("housingtype_772L_mean_target"),
-                #pl.col("housingtype_772L").fill_null('None').replace(predata.housingtype_772L_frequency, default=None).alias("housingtype_772L_frequency"),
+                pl.col("housingtype_772L").cast(pl.String).fill_null('None').replace(predata.housingtype_772L_mean_target, default=None).cast(pl.Float64).alias("housingtype_772L_mean_target"),
+                #pl.col("housingtype_772L").cast(pl.String).fill_null('None').replace(predata.housingtype_772L_frequency, default=None).cast(pl.Int64).alias("housingtype_772L_frequency"),
 
-                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_mean_target, default=None).alias("incometype_1044T_mean_target"),
-                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_frequency, default=None).alias("incometype_1044T_frequency"),
+                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_mean_target, default=None).cast(pl.Float64).alias("incometype_1044T_mean_target"),
+                pl.col("incometype_1044T").fill_null('None').replace(predata.incometype_1044T_frequency, default=None).cast(pl.Int64).alias("incometype_1044T_frequency"),
 
-                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_mean_target, default=None).alias("language1_981M_mean_target"),
-                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_frequency, default=None).alias("language1_981M_frequency"),
+                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_mean_target, default=None).cast(pl.Float64).alias("language1_981M_mean_target"),
+                pl.col("language1_981M").fill_null('None').replace(predata.language1_981M_frequency, default=None).cast(pl.Int64).alias("language1_981M_frequency"),
 
-                pl.col("role_1084L").fill_null('None').replace(predata.role_1084L_mean_target, default=None).alias("role_1084L_mean_target"),
-                #pl.col("role_1084L").fill_null('None').replace(predata.role_1084L_frequency, default=None).alias("role_1084L_frequency"),
+                pl.col("role_1084L").cast(pl.String).fill_null('None').replace(predata.role_1084L_mean_target, default=None).cast(pl.Float64).alias("role_1084L_mean_target"),
+                #pl.col("role_1084L").cast(pl.String).fill_null('None').replace(predata.role_1084L_frequency, default=None).cast(pl.Int64).alias("role_1084L_frequency"),
 
-                pl.col("type_25L").fill_null('None').replace(predata.type_25L_mean_target, default=None).alias("type_25L_mean_target"),
-                pl.col("type_25L").fill_null('None').replace(predata.type_25L_frequency, default=None).alias("type_25L_frequency"),
+                pl.col("type_25L").cast(pl.String).cast(pl.String).fill_null('None').replace(predata.type_25L_mean_target, default=None).cast(pl.Float64).alias("type_25L_mean_target"),
+                pl.col("type_25L").cast(pl.String).fill_null('None').replace(predata.type_25L_frequency, default=None).cast(pl.Int64).alias("type_25L_frequency"),
 
 
                 # Categorical (many categories to int)
-                pl.col("registaddr_district_1083M").replace(predata.registaddr_district_1083M_idx, default=0).alias("registaddr_district_1083M"),
+                pl.col("registaddr_district_1083M").replace(predata.registaddr_district_1083M_idx, default=0).cast(pl.Int32).alias("registaddr_district_1083M"),
 
 
 
             ).with_columns(
                 # average between housetype_905L_mean_target and housetype_905L_mean_target
-                (pl.col("housetype_905L_mean_target") + pl.col("housingtype_772L_mean_target")).mul(0.5).alias("housetype_905L_772L_mean_target"),
+                (pl.col("housetype_905L_mean_target") + pl.col("housingtype_772L_mean_target")).mul(0.5).cast(pl.Float64).alias("housetype_905L_772L_mean_target"),
                 
             ).drop(["housetype_905L_mean_target","housetype_905L_mean_target"])
 
@@ -478,14 +478,14 @@ class CreditRiskProcessing:
                     # Number of non-null collater_valueofguarantee_1124L
                     pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_1124L"),
                     # Total sum and mean of collater_valueofguarantee_1124L
-                    pl.col("collater_valueofguarantee_1124L").sum().alias("collater_valueofguarantee_1124L_sum"),
-                    pl.col("collater_valueofguarantee_1124L").mean().alias("collater_valueofguarantee_1124L_mean"),
+                    pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).sum().alias("collater_valueofguarantee_1124L_sum"),
+                    pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).mean().alias("collater_valueofguarantee_1124L_mean"),
 
                     # Number of non-null collater_valueofguarantee_876L
                     pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_876L"),
                     # Total sum and mean of collater_valueofguarantee_876L
-                    pl.col("collater_valueofguarantee_876L").sum().alias("collater_valueofguarantee_876L_sum"),
-                    pl.col("collater_valueofguarantee_876L").mean().alias("collater_valueofguarantee_876L_mean"),
+                    pl.col("collater_valueofguarantee_876L").cast(pl.Float64).sum().alias("collater_valueofguarantee_876L_sum"),
+                    pl.col("collater_valueofguarantee_876L").cast(pl.Float64).mean().alias("collater_valueofguarantee_876L_mean"),
 
                     # Number of non-null collaterals_typeofguarante_359M
                     pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_359M"),
@@ -627,39 +627,39 @@ class CreditRiskProcessing:
                 *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in summary_columns],
 
                 # Create new features from summary columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
                 
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
 
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
 
-                #*[pl.col(col).filter(
+                #*[pl.col(col).cast(pl.Float64).filter(
                 #        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                 #        ).median().fill_null(0.0).alias(col+"_median") for col in summary_columns],
 
                 # Create mean values for columns in mean_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
 
                 # Create columns with sum values from sum_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
 
                 # Create columns with max values from max_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
 
                 # Create columns with min values from min_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
 
@@ -802,60 +802,60 @@ class CreditRiskProcessing:
 
                 # Number of non-null entries and non-zeros in number_non0s_column columns
                 *[pl.when(
-                    (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                    (pl.col(col).is_not_null()) & (pl.col(col).cast(pl.Float64).gt(0.0))
                     ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in number_non0s_column],
 
                 # Create new features from summary columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
                 
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
 
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
 
                 # Create mean values for columns in mean_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
 
                 # Create std values for columns in std_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).std().fill_null(0.0).alias(col+"_std") for col in std_columns],
 
                 # Create columns with sum values from sum_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
 
                 # Create columns with max values from max_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
 
                 # Create columns with min values from min_columns
-                *[pl.col(col).filter(
+                *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
                         ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
 
                 
                 # Diffs
-                (pl.col('annualeffectiverate_63L').sum().fill_null(0.0) - pl.col('annualeffectiverate_199L').sum().fill_null(0.0)).alias('annualeffectiverate_63L_199L_sum_diff'),
-                (pl.col('annualeffectiverate_63L').mean().fill_null(0.0) - pl.col('annualeffectiverate_199L').mean().fill_null(0.0)).alias('annualeffectiverate_63L_199L_mean_diff'),
+                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).sum().fill_null(0.0) - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).alias('annualeffectiverate_63L_199L_sum_diff'),
+                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('annualeffectiverate_63L_199L_mean_diff'),
 
                 (pl.col('credlmt_935A').sum().fill_null(0.0) - pl.col('credlmt_230A').sum().fill_null(0.0)).alias('credlmt_935A_1230A_sum_diff'),
                 (pl.col('credlmt_935A').mean().fill_null(0.0) - pl.col('credlmt_230A').mean().fill_null(0.0)).alias('credlmt_935A_230A_mean_diff'),
 
                 # Interest Rate Spread: Calculate the difference between the nominal interest rates for active and closed contracts. This spread could be indicative of risk.
-                (pl.col('nominalrate_281L').mean().fill_null(0.0) - pl.col('nominalrate_498L').mean().fill_null(0.0)).alias('nominalrate_281L_498L_mean_diff'),
+                (pl.col('nominalrate_281L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('nominalrate_498L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('nominalrate_281L_498L_mean_diff'),
 
                 # Contract Sum Spread: Calculate the difference between the sum of active and closed contracts. This spread could be indicative of risk.
-                (pl.col('contractsum_5085717L').mean().fill_null(0.0) - pl.col('contractsum_5085717L').mean().fill_null(0.0)).alias('contractsum_5085717L_mean_diff'),
+                (pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('contractsum_5085717L_mean_diff'),
 
                 # DPD Spread: Calculate the difference between the maximum DPD values for active and closed contracts. This spread could be indicative of risk.
                 (pl.col('dpdmax_139P').mean().fill_null(0.0) - pl.col('dpdmax_757P').mean().fill_null(0.0)).alias('dpdmax_139P_757P_mean_diff'),
@@ -879,23 +879,23 @@ class CreditRiskProcessing:
                 (pl.col('monthlyinstlamount_332A').sum().fill_null(0.0) / pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('monthlyinstlamount_332A_674A_ratio'),
 
                 # Instalment Stability: Compare the number of instalments for active contracts with the average number of instalments for closed contracts. A significant deviation might indicate instability.
-                (pl.col('numberofinstls_320L').sum().fill_null(0.0) / pl.col('numberofinstls_229L').sum().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_sum_ratio'),
-                (pl.col('numberofinstls_320L').mean().fill_null(0.0) / pl.col('numberofinstls_229L').mean().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_mean_ratio'),
+                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_sum_ratio'),
+                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).mean().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_mean_ratio'),
 
                 # the ratio of the actual number of outstanding instalments 'numberofoutstandinstls_59L' to the total number of instalments 'numberofinstls_320L' for active contracts.
-                (pl.col('numberofoutstandinstls_59L').sum().fill_null(0.0) / pl.col('numberofinstls_320L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_59L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoutstandinstls_59L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_59L_numberofinstls_320L_ratio'),
                 # the ratio of the actual number of outstanding instalments 'numberofoutstandinstls_520L' to the total number of instalments 'numberofinstls_229L' for closed contracts.
-                (pl.col('numberofoutstandinstls_520L').sum().fill_null(0.0) / pl.col('numberofinstls_229L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_520L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoutstandinstls_520L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_520L_numberofinstls_229L_ratio'),
 
                 # Ratio of numberofoverdueinstlmax_1039L to numberofinstls_320L for active contract
-                (pl.col('numberofoverdueinstlmax_1039L').sum().fill_null(0.0) / pl.col('numberofinstls_320L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1039L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoverdueinstlmax_1039L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1039L_numberofinstls_320L_ratio'),
                 # Ratio of numberofoverdueinstlmax_1039L to numberofinstls_229L for closed contract
-                (pl.col('numberofoverdueinstlmax_1151L').sum().fill_null(0.0) / pl.col('numberofinstls_229L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1151L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoverdueinstlmax_1151L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1151L_numberofinstls_229L_ratio'),
 
                 # the ratio of the actual number of overdue instalments 'numberofoverdueinstls_725L' to the total number of instalments 'numberofinstls_320L' for active contracts.
-                (pl.col('numberofoverdueinstls_725L').sum().fill_null(0.0) / pl.col('numberofinstls_320L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_725L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoverdueinstls_725L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_725L_numberofinstls_320L_ratio'),
                 # the ratio of the actual number of overdue instalments 'numberofoverdueinstls_834L' to the total number of instalments 'numberofinstls_229L' for closed contracts.
-                (pl.col('numberofoverdueinstls_834L').sum().fill_null(0.0) / pl.col('numberofinstls_229L').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_834L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoverdueinstls_834L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_834L_numberofinstls_229L_ratio'),
 
                 # Ratio of outstanding amount outstandingamount_354A to credit limit credlmt_230A for closed contracts
                 (pl.col('outstandingamount_354A').sum().fill_null(0.0) / pl.col('credlmt_230A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('outstandingamount_354A_credlmt_230A_ratio'),
@@ -984,7 +984,7 @@ class CreditRiskProcessing:
 
                 # Refresh date info
                 #pl.col('refreshdate_3813885D').min().alias('refreshdate_3813885D_min'),
-                #pl.col('refreshdate_3813885D').max().alias('refreshdate_3813885D_max'),
+                pl.col('refreshdate_3813885D').max().alias('refreshdate_3813885D_max'),
                 #pl.col('refreshdate_3813885D').mean().alias('refreshdate_3813885D_mean'),
                 # difference between max and min values of refreshdate_3813885D in days
                 (pl.col('refreshdate_3813885D').max() - pl.col('refreshdate_3813885D').min()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_diff'),
@@ -1039,7 +1039,7 @@ class CreditRiskProcessing:
         if table_name=='person_1':
 
             # One-hot-encoded features
-            persontype_1072L_unique = [1.0,4.0,5.0]
+            persontype_1072L_unique = ['1.0', '4.0', '5.0']
             education_927M_unique = ['P17_36_170', 'a55475b1', 'P106_81_188', 'P97_36_170', 'P157_18_172', 'P33_146_175']
             empl_employedtotal_800L_unique = ['MORE_FIVE','LESS_ONE','MORE_ONE']
             empl_industry_691L_unique = ['MINING', 'EDUCATION', 'RECRUITMENT', 'TRADE', 'LAWYER', 'ART_MEDIA', 'GOVERNMENT', 'TRANSPORTATION', 'MANUFACTURING', 'MARKETING', 'AGRICULTURE', 'CATERING', 'IT', 'HEALTH', 'WELNESS', 'INSURANCE', 'REAL_ESTATE', 'GAMING', 'ARMY_POLICE', 'POST_TELCO', 'FINANCE', 'OTHER', 'TOURISM', 'CHARITY_RELIGIOUS']
@@ -1053,7 +1053,7 @@ class CreditRiskProcessing:
             data = data.group_by('case_id').agg(
 
                 # Select first non-null value of childnum_185L
-                pl.col('childnum_185L').first().fill_null(0).cast(pl.Int16).alias('childnum_185L'),
+                pl.col('childnum_185L').first().cast(pl.Float64,strict=False).fill_null(0).cast(pl.Int16).alias('childnum_185L'),
 
                 # Number of persons indicated in the application form
                 pl.when( pl.col('personindex_1023L').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_personindex_1023L"),
@@ -1091,7 +1091,7 @@ class CreditRiskProcessing:
                 #pl.col("sex_738L_M").first().fill_null(0).cast(pl.Int16).alias("sex_738L_M"),
                 #pl.col("sex_738L_F").first().fill_null(0).cast(pl.Int16).alias("sex_738L_F"),
 
-                pl.col("sex_738L").drop_nulls().first().replace({"F": 0, "M": 1}, default=None).cast(pl.Int16).alias('sex_738L'),
+                pl.col("sex_738L").drop_nulls().first().replace({"F": 0, "M": 1}, default=None).fill_null(-1).cast(pl.Int16).alias('sex_738L'),
 
                 # one-hot-encoded columns for incometype_1044T
                 *[pl.col(f"incometype_1044T_{incometype}").sum().cast(pl.Int16).alias(f"incometype_{incometype}_1044T") for incometype in incometype_1044T_unique],
@@ -1099,19 +1099,19 @@ class CreditRiskProcessing:
                 # one-hot-encoded columns for language1_981M
                 *[pl.col(f"language1_981M_{language}").sum().cast(pl.Int16).alias(f"language1_{language}_981M") for language in language1_981M_unique],
                 
-
+                
                 # Date of birth: select the first non-null value. TODO: both columns should be combine in one as they have the same date
                 pl.col('birth_259D').max().alias('birth_259D'),
                 pl.col('birthdate_87D').max().alias('birthdate_87D'),
 
 
-                # Encoded addresses (categorical)
-                pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("contaddr_district_15M"),
-                pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("contaddr_zipcode_807M"),
-                pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer().fill_null(0).alias("empladdr_zipcode_114M"),
+                # # Encoded addresses (categorical)
+                # pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_district_15M"),
+                # pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_zipcode_807M"),
+                # pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("empladdr_zipcode_114M"),
 
-                pl.col("contaddr_matchlist_1032L").first().cast(pl.Int16).alias("contaddr_matchlist_1032L"),
-                pl.col("contaddr_smempladdr_334L").first().cast(pl.Int16).alias("contaddr_smempladdr_334L"),
+                pl.col("contaddr_matchlist_1032L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_matchlist_1032L"),
+                pl.col("contaddr_smempladdr_334L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_smempladdr_334L"),
 
                 # is employed?
                 pl.when( pl.col('empl_employedfrom_271D').drop_nulls().first().is_not_null() ).then(1).otherwise(0).cast(pl.Int16).alias("empl_employedfrom_271D_isemployed"),
@@ -1121,15 +1121,14 @@ class CreditRiskProcessing:
                 # Main income amount (TODO: more features are possible)
                 pl.col("mainoccupationinc_384A").drop_nulls().first().fill_null(0.0).alias("mainoccupationinc_384A"),
 
-
-                # Categorical with many categories (encoded to it by hand) - registaddr_zipcode_184M ignored
+                # Categorical with many categories (encoded by hand to integer) - registaddr_zipcode_184M ignored
                 pl.col("registaddr_district_1083M").first().alias("registaddr_district_1083M"),
 
                 # Bool type remitter_829L
-                pl.col("remitter_829L").drop_nulls().first().fill_null(-1).cast(pl.Int16).alias("remitter_829L"),
+                pl.col("remitter_829L").drop_nulls().first().cast(pl.Int16,strict=False).fill_null(-1).alias("remitter_829L"),
 
                 # Bool type safeguarantyflag_411L
-                pl.col("safeguarantyflag_411L").drop_nulls().first().fill_null(-1).cast(pl.Int16).alias("safeguarantyflag_411L"),
+                pl.col("safeguarantyflag_411L").drop_nulls().first().cast(pl.Int16,strict=False).fill_null(-1).alias("safeguarantyflag_411L"),
 
                 # Number of type_25L indicated
                 pl.when( pl.col('type_25L').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_type_25L"),
@@ -1140,8 +1139,8 @@ class CreditRiskProcessing:
                 # Various frequency columns
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
 
-                # Columns from person_2 table
 
+                # Columns from person_2 table
 
                 # Number of non-null related person roles indicated
                 pl.col('num_related_persons').sum().fill_null(0).alias('num_related_persons'),
@@ -1341,6 +1340,9 @@ class CreditRiskProcessing:
         query_base = query_base.fill_null(0).fill_nan(0)   # .with_columns(cs.numeric().replace(float("inf"),0.0))
 
 
+
+
+
         return query_base # query_base
 
 
@@ -1355,8 +1357,8 @@ if __name__ == "__main__":
     # Load the data
     data_store = cr.load_data_and_process()
 
-    # Drop the rows with null values
-    data_store = cr.drop_null_rows(data_store)
+    
+
 
     # Create the features
     features = cr.create_features(data_store)
