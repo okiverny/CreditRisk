@@ -46,6 +46,45 @@ class CreditRiskProcessing:
                         break # Move to the next column
 
         return df
+    
+    def reduce_memory_usage_pl(self, df: pl.DataFrame) -> pl.DataFrame:
+        """ Reduce memory usage by polars dataframe {df} with name {name} by changing its data types."""
+    
+        print(f"Memory usage of dataframe is {round(df.estimated_size('mb'), 2)} MB")
+        Numeric_Int_types = [pl.Int8,pl.Int16,pl.Int32,pl.Int64]
+        Numeric_Float_types = [pl.Float32,pl.Float64]
+        for col in df.columns:
+            if col in ['case_id', 'WEEK_NUM', 'num_group1', 'num_group2']:
+                continue
+
+            col_type = df[col].dtype
+            c_min = df[col].min()
+            c_max = df[col].max()
+            # Ignore columns with all nulls
+            if not c_min: continue
+
+            # Casting
+            if col_type in Numeric_Int_types:
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df = df.with_columns(df[col].cast(pl.Int8))
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df = df.with_columns(df[col].cast(pl.Int16))
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df = df.with_columns(df[col].cast(pl.Int32))
+                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
+                    df = df.with_columns(df[col].cast(pl.Int64))
+            elif col_type in Numeric_Float_types:
+                if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df = df.with_columns(df[col].cast(pl.Float32))
+                else:
+                    pass
+            #elif col_type == pl.Utf8:
+            #    df = df.with_columns(df[col].cast(pl.Categorical))
+            else:
+                pass
+
+        print(f"Memory usage after optimization is: {round(df.estimated_size('mb'), 2)} MB")
+        return df
 
     
     def cat_to_int_encode(self, data: pl.DataFrame, column_name: str, new_column_name: str, encoding_dict: dict) -> pl.DataFrame:
@@ -310,7 +349,7 @@ class CreditRiskProcessing:
                 *[pl.col("empl_employedtotal_800L").cast(pl.String).eq(empl).cast(pl.Int16).alias(f"empl_employedtotal_800L_{empl}") for empl in empl_employedtotal_800L_unique],
 
                 # one-hot-encoded columns for empl_industry_691L
-                *[pl.col("empl_industry_691L").cast(pl.String).cast(pl.String).eq(empl).cast(pl.Int16).alias(f"empl_industry_691L_{empl}") for empl in empl_industry_691L_unique],
+                *[pl.col("empl_industry_691L").cast(pl.String).eq(empl).cast(pl.Int16).alias(f"empl_industry_691L_{empl}") for empl in empl_industry_691L_unique],
                 
                 # one-hot-encoded columns for familystate_447L
                 *[pl.col("familystate_447L").cast(pl.String).eq(familystate).cast(pl.Int16).alias(f"familystate_447L_{familystate}") for familystate in familystate_447L_unique],
@@ -383,7 +422,7 @@ class CreditRiskProcessing:
                 pl.col("role_1084L").cast(pl.String).fill_null('None').replace(predata.role_1084L_mean_target, default=None).cast(pl.Float64).alias("role_1084L_mean_target"),
                 #pl.col("role_1084L").cast(pl.String).fill_null('None').replace(predata.role_1084L_frequency, default=None).cast(pl.Int64).alias("role_1084L_frequency"),
 
-                pl.col("type_25L").cast(pl.String).cast(pl.String).fill_null('None').replace(predata.type_25L_mean_target, default=None).cast(pl.Float64).alias("type_25L_mean_target"),
+                pl.col("type_25L").cast(pl.String).fill_null('None').replace(predata.type_25L_mean_target, default=None).cast(pl.Float64).alias("type_25L_mean_target"),
                 pl.col("type_25L").cast(pl.String).fill_null('None').replace(predata.type_25L_frequency, default=None).cast(pl.Int64).alias("type_25L_frequency"),
 
 
@@ -397,6 +436,50 @@ class CreditRiskProcessing:
                 (pl.col("housetype_905L_mean_target") + pl.col("housingtype_772L_mean_target")).mul(0.5).cast(pl.Float64).alias("housetype_905L_772L_mean_target"),
                 
             ).drop(["housetype_905L_mean_target","housetype_905L_mean_target"])
+
+        if table_name=='applprev_1':
+
+            credtype_587L_unique = ['REL','CAL','COL']
+
+            # Adding new columns
+            data = data.with_columns(
+                pl.col("cancelreason_3545846M").cast(pl.String).replace(predata.cancelreason_3545846M_mean_target, default=None).cast(pl.Float64).alias("cancelreason_3545846M_mean_target"),
+                pl.col("cancelreason_3545846M").cast(pl.String).replace(predata.cancelreason_3545846M_frequency, default=None).cast(pl.Float64).alias("cancelreason_3545846M_frequency"),
+
+                pl.col("credacc_status_367L").cast(pl.String).fill_null('None').replace(predata.credacc_status_367L_mean_target, default=None).cast(pl.Float64).alias("credacc_status_367L_mean_target"),
+                pl.col("credacc_status_367L").cast(pl.String).fill_null('None').replace(predata.credacc_status_367L_frequency, default=None).cast(pl.Float64).alias("credacc_status_367L_frequency"),
+
+                pl.col("credtype_587L").cast(pl.String).fill_null('None').replace(predata.credtype_587L_mean_target, default=None).cast(pl.Float64).alias("credtype_587L_mean_target"),
+                pl.col("credtype_587L").cast(pl.String).fill_null('None').replace(predata.credtype_587L_frequency, default=None).cast(pl.Float64).alias("credtype_587L_frequency"),
+
+                # TODO: define one-hot-encoded
+                pl.col("education_1138M").cast(pl.String).replace(predata.education_1138M_mean_target, default=None).cast(pl.Float64).alias("education_1138M_mean_target"),
+                pl.col("education_1138M").cast(pl.String).replace(predata.education_1138M_frequency, default=None).cast(pl.Float64).alias("education_1138M_frequency"),
+
+                pl.col("familystate_726L").cast(pl.String).fill_null('None').replace(predata.familystate_726L_mean_target, default=None).cast(pl.Float64).alias("familystate_726L_mean_target"),
+                pl.col("familystate_726L").cast(pl.String).fill_null('None').replace(predata.familystate_726L_frequency, default=None).cast(pl.Float64).alias("familystate_726L_frequency"),
+
+                pl.col("inittransactioncode_279L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_279L_mean_target, default=None).cast(pl.Float64).alias("inittransactioncode_279L_mean_target"),
+                pl.col("inittransactioncode_279L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_279L_frequency, default=None).cast(pl.Float64).alias("inittransactioncode_279L_frequency"),
+
+                pl.col("postype_4733339M").replace(predata.postype_4733339M_mean_target, default=None).cast(pl.Float64).alias("postype_4733339M_mean_target"),
+                pl.col("postype_4733339M").replace(predata.postype_4733339M_frequency, default=None).cast(pl.Float64).alias("postype_4733339M_frequency"),
+
+                pl.col("rejectreason_755M").replace(predata.rejectreason_755M_mean_target, default=None).cast(pl.Float64).alias("rejectreason_755M_mean_target"),
+                pl.col("rejectreason_755M").replace(predata.rejectreason_755M_frequency, default=None).cast(pl.Float64).alias("rejectreason_755M_frequency"),
+
+                pl.col("rejectreasonclient_4145042M").replace(predata.rejectreasonclient_4145042M_mean_target, default=None).cast(pl.Float64).alias("rejectreasonclient_4145042M_mean_target"),
+                pl.col("rejectreasonclient_4145042M").replace(predata.rejectreasonclient_4145042M_frequency, default=None).cast(pl.Float64).alias("rejectreasonclient_4145042M_frequency"),
+
+                pl.col("status_219L").cast(pl.String).fill_null('None').replace(predata.status_219L_mean_target, default=None).cast(pl.Float64).alias("status_219L_mean_target"),
+                pl.col("status_219L").cast(pl.String).fill_null('None').replace(predata.status_219L_frequency, default=None).cast(pl.Float64).alias("status_219L_frequency"),
+
+                # one-hot-encoded for credtype_587L
+                *[pl.col("credtype_587L").cast(pl.String).eq(credtype).cast(pl.Int16).alias(f"credtype_587L_{credtype}") for credtype in credtype_587L_unique],
+
+            )
+
+
 
         return data
     
@@ -1099,16 +1182,16 @@ class CreditRiskProcessing:
                 # one-hot-encoded columns for language1_981M
                 *[pl.col(f"language1_981M_{language}").sum().cast(pl.Int16).alias(f"language1_{language}_981M") for language in language1_981M_unique],
                 
-                
+
                 # Date of birth: select the first non-null value. TODO: both columns should be combine in one as they have the same date
                 pl.col('birth_259D').max().alias('birth_259D'),
                 pl.col('birthdate_87D').max().alias('birthdate_87D'),
 
 
                 # # Encoded addresses (categorical)
-                # pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_district_15M"),
-                # pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_zipcode_807M"),
-                # pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("empladdr_zipcode_114M"),
+                pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_district_15M"),
+                pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_zipcode_807M"),
+                pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("empladdr_zipcode_114M"),
 
                 pl.col("contaddr_matchlist_1032L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_matchlist_1032L"),
                 pl.col("contaddr_smempladdr_334L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_smempladdr_334L"),
@@ -1156,6 +1239,153 @@ class CreditRiskProcessing:
             ).drop(['empls_employedfrom_796D','empl_employedfrom_271D','birth_259D','birthdate_87D'])
             # Ignored: isreference_387L,registaddr_zipcode_184M,role_993L
 
+        if table_name=='applprev_1':
+
+            credtype_587L_unique = ['REL','CAL','COL']
+
+            # Columns to comute Summary Statistics (max, sum, mean, median)
+            summary_columns = ['pmtnum_8L']
+            mean_columns = ['credamount_590A','currdebt_94A','downpmt_134A','revolvingaccount_394A','tenor_203L']
+            sum_columns = ['actualdpd_943P','annuity_853A','credacc_transactions_402L','credamount_590A','currdebt_94A']
+            max_columns = ['actualdpd_943P','annuity_853A','credacc_maxhisbal_375A','credacc_minhisbal_90A','currdebt_94A','downpmt_134A','mainoccupationinc_437A',
+                           'maxdpdtolerance_577P']
+            min_columns = []
+            std_columns = []
+            number_non0s_column = ['actualdpd_943P','annuity_853A','downpmt_134A']
+
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+
+                # Number of non-null entries in summary columns
+                *[pl.when(pl.col(col).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in summary_columns],
+
+                # Number of non-null entries and non-zeros in number_non0s_column columns
+                *[pl.when(
+                    (pl.col(col).is_not_null()) & (pl.col(col).cast(pl.Float64).gt(0.0))
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_"+col) for col in number_non0s_column],
+
+                # Create new features from summary columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+
+                # Create mean values for columns in mean_columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+
+                # Create std values for columns in std_columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).std().fill_null(0.0).alias(col+"_std") for col in std_columns],
+
+                # Create columns with sum values from sum_columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+
+                # Create columns with max values from max_columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+
+                # Create columns with min values from min_columns
+                *[pl.col(col).cast(pl.Float64, strict=False).filter(
+                        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+
+                # Late Payment Frequency: Count the number of instances where DPD exceeded a certain threshold (e.g., 30 days). A higher count suggests a riskier borrower.
+                pl.when( (pl.col('actualdpd_943P').is_not_null()) & (pl.col('actualdpd_943P').gt(30.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_late_actualdpd_943P"),
+
+                # Payment-to-Income Ratio: Calculate the ratio of the monthly annuity (annuity_853A) to the applicant’s income (byoccupationinc_3656910L). A higher ratio may indicate financial strain, affecting the ability to repay.
+                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("annuity_853A_byoccupationinc_3656910L_ratio_mean"),
+                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("annuity_853A_byoccupationinc_3656910L_ratio_max"),
+
+                # Payment-to-Income Ratio: Calculate the ratio of the monthly annuity (annuity_853A) to the applicant’s income (mainoccupationinc_437A). A higher ratio may indicate financial strain, affecting the ability to repay.
+                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("annuity_853A_mainoccupationinc_437A_ratio_mean"),
+                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("annuity_853A_mainoccupationinc_437A_ratio_max"),
+
+                # childnum_21L
+                pl.col("childnum_21L").cast(pl.Int16, strict=False).max().fill_null(0).alias("childnum_21L_max"),
+
+                # Credit Utilization Ratio: Calculate the ratio of the actual balance (credacc_actualbalance_314A) to the credit limit (credacc_credlmt_575A). A high ratio may indicate credit stress.
+                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).max().fill_null(0.0).alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_max"),
+
+                # Balance-to-Income Ratio: Divide the actual balance (credacc_actualbalance_314A) by the applicant’s income (byoccupationinc_3656910L). A high ratio may signal financial strain.
+                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_max"),
+                # Balance-to-Income Ratio: Divide the actual balance (credacc_actualbalance_314A) by the applicant’s income (mainoccupationinc_437A). A high ratio may signal financial strain.
+                (pl.col("credacc_actualbalance_314A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("credacc_actualbalance_314A_mainoccupationinc_437A_ratio_mean"),
+
+                # Check if 'mainoccupationinc_437A' increases or decreases by difference 'last - first'
+                pl.when( (pl.col('mainoccupationinc_437A').last() - pl.col('mainoccupationinc_437A').first())>0 ).then(1).otherwise(0).cast(pl.Int16).alias('mainoccupationinc_437A_increase'),
+
+                # Utilization Ratio: Divide the actual balance (credacc_actualbalance_314A) by the credit amount or card limit (credamount_590A). A high ratio suggests credit stress.
+                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("credacc_actualbalance_314A_credamount_590A_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("credacc_actualbalance_314A_credamount_590A_ratio_max"),
+
+                # Credit Utilization Ratio: Divide the actual credit usage (e.g., outstanding debt) by the credit limit. 
+                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_mean"),
+                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_max"),
+
+
+                # 'approvaldate_319D' has pl.Date type. Compute difference between max and min dates in days
+                (pl.col('approvaldate_319D').max() - pl.col('approvaldate_319D').min()).dt.total_days().fill_null(0).mul(1.0/30).alias("approvaldate_319D_duration"),
+                # Last approval date
+                pl.col('approvaldate_319D').drop_nulls().last().alias('approvaldate_319D_last'),
+                # Last creation date
+                pl.col('creationdate_885D').drop_nulls().max().alias('creationdate_885D_last'),
+                # Lat activation date
+                pl.col('dateactivated_425D').drop_nulls().max().alias('dateactivated_425D_last'),
+                # Last payment date
+                pl.col('dtlastpmt_581D').max().alias('dtlastpmt_581D_last'),
+                # Last date
+                pl.col('dtlastpmtallstes_3545839D').max().alias('dtlastpmtallstes_3545839D_last'),
+                # First date
+                pl.col('firstnonzeroinstldate_307D').max().alias('firstnonzeroinstldate_307D_last'),
+                # Employed from
+                pl.col('employedfrom_700D').max().alias('employedfrom_700D_last'),
+                pl.col('employedfrom_700D').min().alias('employedfrom_700D_first'),
+
+                # Averaged duration of credits
+                (pl.col('dtlastpmtallstes_3545839D') - pl.col('firstnonzeroinstldate_307D')).dt.total_days().mean().fill_null(0).mul(1.0/30).cast(pl.Float64, strict=False).alias('firstnonzeroinstldate_307D_dtlastpmtallstes_3545839D_diff'),
+                pl.when(pl.col('dtlastpmtallstes_3545839D').is_not_null()).then(1).otherwise(0).sum().cast(pl.Int64).alias("num_dtlastpmtallstes_3545839D"),
+                
+                # Boolean columns isbidproduct_390L and isdebitcard_527L: count true's
+                pl.when( (pl.col('isbidproduct_390L').is_not_null()) & (pl.col('isbidproduct_390L').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_isbidproduct_390L"),
+                pl.when( (pl.col('isdebitcard_527L').is_not_null()) & (pl.col('isdebitcard_527L').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_isdebitcard_527L"),
+
+                # last balance on previous credit
+                pl.col("credacc_actualbalance_314A").drop_nulls().last().alias("credacc_actualbalance_314A_last"),
+
+                # Sum of one-hot-encoded columns credtype_587L
+                *[pl.col(f"credtype_587L_{credtype}").sum().cast(pl.Int16).alias(f"credtype_{credtype}_587L") for credtype in credtype_587L_unique],
+
+                ##### Depth 2 columns
+                pl.col('num_contacts').mean().alias('num_contacts_mean'),
+                pl.col("most_influential_contact").max().alias("most_influential_contact"),
+                pl.col('num_credacc_cards_status').mean().alias('num_credacc_cards_status'),
+                pl.col("most_influential_credacc_cards_status").max().alias("most_influential_credacc_cards_status"),
+                pl.col('num_credit_card_blocks').sum().alias('num_credit_card_blocks'),
+                pl.col("most_influential_credit_card_block").max().alias("most_influential_credit_card_block"),
+
+
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+
+            )
+            # Ignore: district_544M, profession_152M
 
         return data
     
@@ -1225,6 +1455,7 @@ class CreditRiskProcessing:
             .join(query_credit_bureau_b_2, on=["case_id", "num_group1"], how='left')  # outer
             .collect()
             .pipe(self.aggregate_depth_1, 'credit_bureau_b_1')
+            .pipe(self.reduce_memory_usage_pl)
             .lazy()
         )
 
@@ -1239,7 +1470,7 @@ class CreditRiskProcessing:
         # Step 2: credit_bureau_b_2 -> credit_bureau_b_1 -> base
         dataframes_credit_bureau_a_2 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_2*.parquet')):
-            if ifile>1: continue
+            #if ifile>1: continue
             q = (
                 pl.read_parquet(file)
                 .lazy()
@@ -1256,7 +1487,7 @@ class CreditRiskProcessing:
 
         dataframes_credit_bureau_a_1 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_credit_bureau_a_1*.parquet')):
-            if ifile>1: continue
+            #if ifile>1: continue
             q = (
                 pl.read_parquet(file)
                 .lazy()
@@ -1270,7 +1501,7 @@ class CreditRiskProcessing:
             dataframes_credit_bureau_a_1.append(q.collect())
 
         # Concat the dataframes
-        query_credit_bureau_a_1 = pl.concat(dataframes_credit_bureau_a_1, how='vertical_relaxed')
+        query_credit_bureau_a_1 = pl.concat(dataframes_credit_bureau_a_1, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
         del dataframes_credit_bureau_a_1
 
         # Join with base
@@ -1280,7 +1511,7 @@ class CreditRiskProcessing:
         # Step 3: person_2 -> person_1 -> base
         dataframes_person_2 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_person_2*.parquet')):
-            if ifile>1: continue
+            #if ifile>1: continue
             q = (
                 pl.read_parquet(file)
                 .lazy()
@@ -1297,7 +1528,7 @@ class CreditRiskProcessing:
 
         dataframes_person_1 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_person_1*.parquet')):
-            if ifile>1: continue
+            #if ifile>1: continue
             q = (
                 pl.read_parquet(file)
                 .lazy()
@@ -1311,20 +1542,63 @@ class CreditRiskProcessing:
             dataframes_person_1.append(q.collect())
 
         # Concat the dataframes
-        query_person_1 = pl.concat(dataframes_person_1, how='vertical_relaxed')
+        query_person_1 = pl.concat(dataframes_person_1, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
         del dataframes_person_1
 
         # Join with base
         query_base = query_base.join(query_person_1, on="case_id", how=howtojoin)
 
         #############################################################
+        # Step 4: applprev_2 -> applprev_1 => base
+        dataframes_applprev_2 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_applprev_2*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'applprev_2')
+                .pipe(self.aggregate_depth_2, 'applprev_2')
+                .lazy()
+            )
+            dataframes_applprev_2.append(q.collect())
+
+        # Concat the dataframes
+        query_applprev_2 = pl.concat(dataframes_applprev_2, how='vertical_relaxed').lazy()
+        del dataframes_applprev_2
+
+        dataframes_applprev_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_applprev_1*.parquet')):
+            #if ifile>1: continue
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'applprev_1')
+                .join(query_applprev_2, on=["case_id", "num_group1"], how='left')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'applprev_1')
+                .lazy()
+            )
+            dataframes_applprev_1.append(q.collect())
+
+        # Concat the dataframes
+        query_applprev_1 = pl.concat(dataframes_applprev_1, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
+        del dataframes_applprev_1
+
+        # Join with base
+        query_base = query_base.join(query_applprev_1, on="case_id", how=howtojoin)
+
+
 
 
 
 
         # Process the pl.Date columns
         # date features to be transformed from pl.Date using reference date
-        date_cols = ['empls_employedfrom_796D_271D','birth_259D_87D','refreshdate_3813885D_max']
+        date_cols = ['empls_employedfrom_796D_271D','birth_259D_87D','refreshdate_3813885D_max',
+                     'approvaldate_319D_last','creationdate_885D_last',
+                    'dateactivated_425D_last','dtlastpmt_581D_last','dtlastpmtallstes_3545839D_last','firstnonzeroinstldate_307D_last',
+                    'employedfrom_700D_last','employedfrom_700D_first']
         date_ref = 'date_decision'    # refreshdate_3813885D_max
 
         # Convert 'date_decision' to pl.Date
