@@ -1387,6 +1387,30 @@ class CreditRiskProcessing:
             )
             # Ignore: district_544M, profession_152M
 
+        if table_name=='debitcard_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Number of cards?
+                pl.when( (pl.col('last180dayaveragebalance_704A').is_not_null()) & (pl.col('last180dayaveragebalance_704A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_last180dayaveragebalance_704A"),
+
+                # Balance-to-Turnover Ratio:  Create a new feature by dividing last180dayaveragebalance_704A by last180dayturnover_1134A.         * A higher ratio might indicate better financial management and lower default risk.
+                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_max"),
+                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_mean"),
+
+                pl.col("last180dayaveragebalance_704A").sum().fill_null(0.0).alias("last180dayaveragebalance_704A_sum"),
+                pl.col("last180dayturnover_1134A").sum().fill_null(0.0).alias("last180dayturnover_1134A_sum"),
+                pl.col("last30dayturnover_651A").sum().fill_null(0.0).alias("last30dayturnover_651A_sum"),
+
+                # Recent Turnover Change: Calculate the percentage change in turnover between the last 30 days and the previous 30 days
+                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_max'),
+                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_mean'),
+
+                #  Account Age: Calculate the duration (in days) since the debit card was opened.
+                pl.col('openingdate_857D').max().alias('openingdate_857D_last'),
+                pl.col('openingdate_857D').min().alias('openingdate_857D_first'),
+
+            )
+
         return data
     
     def add_date_features(self, data: pl.DataFrame, ref_date: str, date_cols: list) -> pl.DataFrame:
@@ -1568,7 +1592,6 @@ class CreditRiskProcessing:
 
         dataframes_applprev_1 = []
         for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_applprev_1*.parquet')):
-            #if ifile>1: continue
             q = (
                 pl.read_parquet(file)
                 .lazy()
@@ -1588,7 +1611,29 @@ class CreditRiskProcessing:
         # Join with base
         query_base = query_base.join(query_applprev_1, on="case_id", how=howtojoin)
 
+        #############################################################
+        # Step 5:  debitcard_1 -> base
+        dataframes_debitcard_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_debitcard_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                #.pipe(self.encode_categorical_columns, 'debitcard_1')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'debitcard_1')
+                .lazy()
+            )
+            dataframes_debitcard_1.append(q.collect())
 
+        # Concat the dataframes
+        query_debitcard_1 = pl.concat(dataframes_debitcard_1, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
+        del dataframes_debitcard_1
+
+        # Join with base
+        query_base = query_base.join(query_debitcard_1, on="case_id", how=howtojoin)
+
+        #############################################################
 
 
 
@@ -1598,7 +1643,8 @@ class CreditRiskProcessing:
         date_cols = ['empls_employedfrom_796D_271D','birth_259D_87D','refreshdate_3813885D_max',
                      'approvaldate_319D_last','creationdate_885D_last',
                     'dateactivated_425D_last','dtlastpmt_581D_last','dtlastpmtallstes_3545839D_last','firstnonzeroinstldate_307D_last',
-                    'employedfrom_700D_last','employedfrom_700D_first']
+                    'employedfrom_700D_last','employedfrom_700D_first',
+                    'openingdate_857D_last', 'openingdate_857D_first']
         date_ref = 'date_decision'    # refreshdate_3813885D_max
 
         # Convert 'date_decision' to pl.Date
