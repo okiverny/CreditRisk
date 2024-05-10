@@ -444,41 +444,120 @@ class CreditRiskProcessing:
             # Adding new columns
             data = data.with_columns(
                 pl.col("cancelreason_3545846M").cast(pl.String).replace(predata.cancelreason_3545846M_mean_target, default=None).cast(pl.Float64).alias("cancelreason_3545846M_mean_target"),
-                pl.col("cancelreason_3545846M").cast(pl.String).replace(predata.cancelreason_3545846M_frequency, default=None).cast(pl.Float64).alias("cancelreason_3545846M_frequency"),
+                pl.col("cancelreason_3545846M").cast(pl.String).replace(predata.cancelreason_3545846M_frequency, default=None).cast(pl.Int64).alias("cancelreason_3545846M_frequency"),
 
                 pl.col("credacc_status_367L").cast(pl.String).fill_null('None').replace(predata.credacc_status_367L_mean_target, default=None).cast(pl.Float64).alias("credacc_status_367L_mean_target"),
-                pl.col("credacc_status_367L").cast(pl.String).fill_null('None').replace(predata.credacc_status_367L_frequency, default=None).cast(pl.Float64).alias("credacc_status_367L_frequency"),
+                pl.col("credacc_status_367L").cast(pl.String).fill_null('None').replace(predata.credacc_status_367L_frequency, default=None).cast(pl.Int64).alias("credacc_status_367L_frequency"),
 
                 pl.col("credtype_587L").cast(pl.String).fill_null('None').replace(predata.credtype_587L_mean_target, default=None).cast(pl.Float64).alias("credtype_587L_mean_target"),
-                pl.col("credtype_587L").cast(pl.String).fill_null('None').replace(predata.credtype_587L_frequency, default=None).cast(pl.Float64).alias("credtype_587L_frequency"),
+                pl.col("credtype_587L").cast(pl.String).fill_null('None').replace(predata.credtype_587L_frequency, default=None).cast(pl.Int64).alias("credtype_587L_frequency"),
 
                 # TODO: define one-hot-encoded
                 pl.col("education_1138M").cast(pl.String).replace(predata.education_1138M_mean_target, default=None).cast(pl.Float64).alias("education_1138M_mean_target"),
-                pl.col("education_1138M").cast(pl.String).replace(predata.education_1138M_frequency, default=None).cast(pl.Float64).alias("education_1138M_frequency"),
+                pl.col("education_1138M").cast(pl.String).replace(predata.education_1138M_frequency, default=None).cast(pl.Int64).alias("education_1138M_frequency"),
 
                 pl.col("familystate_726L").cast(pl.String).fill_null('None').replace(predata.familystate_726L_mean_target, default=None).cast(pl.Float64).alias("familystate_726L_mean_target"),
-                pl.col("familystate_726L").cast(pl.String).fill_null('None').replace(predata.familystate_726L_frequency, default=None).cast(pl.Float64).alias("familystate_726L_frequency"),
+                pl.col("familystate_726L").cast(pl.String).fill_null('None').replace(predata.familystate_726L_frequency, default=None).cast(pl.Int64).alias("familystate_726L_frequency"),
 
                 pl.col("inittransactioncode_279L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_279L_mean_target, default=None).cast(pl.Float64).alias("inittransactioncode_279L_mean_target"),
-                pl.col("inittransactioncode_279L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_279L_frequency, default=None).cast(pl.Float64).alias("inittransactioncode_279L_frequency"),
+                pl.col("inittransactioncode_279L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_279L_frequency, default=None).cast(pl.Int64).alias("inittransactioncode_279L_frequency"),
 
                 pl.col("postype_4733339M").replace(predata.postype_4733339M_mean_target, default=None).cast(pl.Float64).alias("postype_4733339M_mean_target"),
-                pl.col("postype_4733339M").replace(predata.postype_4733339M_frequency, default=None).cast(pl.Float64).alias("postype_4733339M_frequency"),
+                pl.col("postype_4733339M").replace(predata.postype_4733339M_frequency, default=None).cast(pl.Int64).alias("postype_4733339M_frequency"),
 
                 pl.col("rejectreason_755M").replace(predata.rejectreason_755M_mean_target, default=None).cast(pl.Float64).alias("rejectreason_755M_mean_target"),
-                pl.col("rejectreason_755M").replace(predata.rejectreason_755M_frequency, default=None).cast(pl.Float64).alias("rejectreason_755M_frequency"),
+                pl.col("rejectreason_755M").replace(predata.rejectreason_755M_frequency, default=None).cast(pl.Int64).alias("rejectreason_755M_frequency"),
 
                 pl.col("rejectreasonclient_4145042M").replace(predata.rejectreasonclient_4145042M_mean_target, default=None).cast(pl.Float64).alias("rejectreasonclient_4145042M_mean_target"),
-                pl.col("rejectreasonclient_4145042M").replace(predata.rejectreasonclient_4145042M_frequency, default=None).cast(pl.Float64).alias("rejectreasonclient_4145042M_frequency"),
+                pl.col("rejectreasonclient_4145042M").replace(predata.rejectreasonclient_4145042M_frequency, default=None).cast(pl.Int64).alias("rejectreasonclient_4145042M_frequency"),
 
                 pl.col("status_219L").cast(pl.String).fill_null('None').replace(predata.status_219L_mean_target, default=None).cast(pl.Float64).alias("status_219L_mean_target"),
-                pl.col("status_219L").cast(pl.String).fill_null('None').replace(predata.status_219L_frequency, default=None).cast(pl.Float64).alias("status_219L_frequency"),
+                pl.col("status_219L").cast(pl.String).fill_null('None').replace(predata.status_219L_frequency, default=None).cast(pl.Int64).alias("status_219L_frequency"),
 
                 # one-hot-encoded for credtype_587L
                 *[pl.col("credtype_587L").cast(pl.String).eq(credtype).cast(pl.Int16).alias(f"credtype_587L_{credtype}") for credtype in credtype_587L_unique],
 
             )
 
+        if table_name=='static_0':
+
+            cardtype_51L_unique = ['PERSONALIZED', 'INSTANT']
+
+            droplist = ['twobodfilling_608L','cardtype_51L','disbursementtype_67L','inittransactioncode_186L','lastapprcommoditycat_1041M','lastapprcommoditytypec_5251766M',
+                    'lastcancelreason_561M','lastrejectcommoditycat_161M','lastrejectcommodtypec_5251769M','lastrejectreason_759M','lastrejectreason_759M',
+                    'lastrejectreasonclient_4145040M','lastrejectreasonclient_4145040M','lastst_736L','previouscontdistrict_112M']
+            
+            
+            bool_columns = ['equalitydataagreement_891L','equalityempfrom_62L','isbidproduct_1095L','isbidproductrequest_292L','isdebitcard_729L','opencred_647L']
+
+            # Adding new columns
+            data = data.with_columns(
+
+                ###### pl.String (Categorical)
+
+                pl.col("bankacctype_710L").cast(pl.String).eq('CA').cast(pl.Int16).alias("bankacctype_710L"),
+                pl.col("paytype1st_925L").cast(pl.String).eq('OTHER').cast(pl.Int16).alias("paytype1st_925L"),
+                pl.col("paytype_783L").cast(pl.String).eq('OTHER').cast(pl.Int16).alias("paytype_783L"),
+
+                pl.col("twobodfilling_608L").cast(pl.String).eq('BO').cast(pl.Int16).alias("twobodfilling_608L_BO"),
+                pl.col("twobodfilling_608L").cast(pl.String).eq('FO').cast(pl.Int16).alias("twobodfilling_608L_FO"),
+
+                pl.col("typesuite_864L").cast(pl.String).eq('AL').cast(pl.Int16).alias("typesuite_864L"),
+                
+
+                pl.col("cardtype_51L").cast(pl.String).fill_null('None').replace(predata.cardtype_51L_mean_target, default=None).cast(pl.Float64).alias("cardtype_51L_mean_target"),
+                pl.col("cardtype_51L").cast(pl.String).fill_null('None').replace(predata.cardtype_51L_frequency, default=None).cast(pl.Int64).alias("cardtype_51L_frequency"),
+
+                pl.col("disbursementtype_67L").cast(pl.String).fill_null('None').replace(predata.disbursementtype_67L_mean_target, default=None).cast(pl.Float64).alias("disbursementtype_67L_mean_target"),
+                pl.col("disbursementtype_67L").cast(pl.String).fill_null('None').replace(predata.disbursementtype_67L_frequency, default=None).cast(pl.Int64).alias("disbursementtype_67L_frequency"),
+
+                pl.col("inittransactioncode_186L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_186L_mean_target, default=None).cast(pl.Float64).alias("inittransactioncode_186L_mean_target"),
+                pl.col("inittransactioncode_186L").cast(pl.String).fill_null('None').replace(predata.inittransactioncode_186L_frequency, default=None).cast(pl.Int64).alias("inittransactioncode_186L_frequency"),
+
+                pl.col("lastapprcommoditycat_1041M").replace(predata.lastapprcommoditycat_1041M_mean_target, default=None).cast(pl.Float64).alias("lastapprcommoditycat_1041M_mean_target"),
+                pl.col("lastapprcommoditycat_1041M").replace(predata.lastapprcommoditycat_1041M_frequency, default=None).cast(pl.Int64).alias("lastapprcommoditycat_1041M_frequency"),
+
+                pl.col("lastapprcommoditytypec_5251766M").replace(predata.lastapprcommoditytypec_5251766M_mean_target, default=None).cast(pl.Float64).alias("lastapprcommoditytypec_5251766M_mean_target"),
+                pl.col("lastapprcommoditytypec_5251766M").replace(predata.lastapprcommoditytypec_5251766M_frequency, default=None).cast(pl.Int64).alias("lastapprcommoditytypec_5251766M_frequency"),
+
+                pl.col("lastcancelreason_561M").replace(predata.lastcancelreason_561M_mean_target, default=None).cast(pl.Float64).alias("lastcancelreason_561M_mean_target"),
+                pl.col("lastcancelreason_561M").replace(predata.lastcancelreason_561M_frequency, default=None).cast(pl.Int64).alias("lastcancelreason_561M_frequency"),
+
+                pl.col("lastrejectcommoditycat_161M").replace(predata.lastrejectcommoditycat_161M_mean_target, default=None).cast(pl.Float64).alias("lastrejectcommoditycat_161M_mean_target"),
+                pl.col("lastrejectcommoditycat_161M").replace(predata.lastrejectcommoditycat_161M_frequency, default=None).cast(pl.Int64).alias("lastrejectcommoditycat_161M_frequency"),
+
+                pl.col("lastrejectcommodtypec_5251769M").replace(predata.lastrejectcommodtypec_5251769M_mean_target, default=None).cast(pl.Float64).alias("lastrejectcommodtypec_5251769M_mean_target"),
+                pl.col("lastrejectcommodtypec_5251769M").replace(predata.lastrejectcommodtypec_5251769M_frequency, default=None).cast(pl.Int64).alias("lastrejectcommodtypec_5251769M_frequency"),
+
+                pl.col("lastrejectreason_759M").replace(predata.lastrejectreason_759M_mean_target, default=None).cast(pl.Float64).alias("lastrejectreason_759M_mean_target"),
+                pl.col("lastrejectreason_759M").replace(predata.lastrejectreason_759M_frequency, default=None).cast(pl.Int64).alias("lastrejectreason_759M_frequency"),
+
+                pl.col("lastrejectreasonclient_4145040M").replace(predata.lastrejectreasonclient_4145040M_mean_target, default=None).cast(pl.Float64).alias("lastrejectreasonclient_4145040M_mean_target"),
+                pl.col("lastrejectreasonclient_4145040M").replace(predata.lastrejectreasonclient_4145040M_frequency, default=None).cast(pl.Int64).alias("lastrejectreasonclient_4145040M_frequency"),
+
+                
+                pl.col("lastst_736L").cast(pl.String).fill_null('None').replace(predata.lastst_736L_mean_target, default=None).cast(pl.Float64).alias("lastst_736L_mean_target"),
+                pl.col("lastst_736L").cast(pl.String).fill_null('None').replace(predata.lastst_736L_frequency, default=None).cast(pl.Int64).alias("lastst_736L_frequency"),
+
+                pl.col("previouscontdistrict_112M").replace(predata.previouscontdistrict_112M_mean_target, default=None).cast(pl.Float64).alias("previouscontdistrict_112M_mean_target"),
+                #pl.col("previouscontdistrict_112M").replace(predata.previouscontdistrict_112M_frequency, default=None).cast(pl.Int64).alias("previouscontdistrict_112M_frequency"),
+
+                # one-hot-encoded columns for cardtype_51L
+                *[pl.col("cardtype_51L").cast(pl.String).eq(cardtype).cast(pl.Int16).alias(f"cardtype_51L_{cardtype}") for cardtype in cardtype_51L_unique],
+
+                ###### pl.Boolean
+                *[pl.col(col).cast(pl.Int8, strict=False).alias(col) for col in bool_columns],
+
+                ###### pl.Date
+                *[pl.col(col).alias(col) for col in predata.date_static_0_columns],
+
+                ###### Numeric (TODO: split into Float and int?)
+                *[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_0],
+
+                # case_id
+                pl.col('case_id').cast(pl.Int64).alias('case_id'),
+
+            ).drop(droplist)
 
 
         return data
@@ -1411,6 +1490,101 @@ class CreditRiskProcessing:
 
             )
 
+        if table_name=='deposit_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Number of non-zero deposit accounts
+                pl.when( (pl.col('amount_416A').is_not_null()) & (pl.col('amount_416A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_416A"),
+                # Accounts with zero deposit
+                pl.when( pl.col('amount_416A').eq(0.0) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_416A_zero"),
+                # Number of closed accounts
+                pl.when( pl.col('contractenddate_991D').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_contractenddate_991D"),
+                # Number of still open accounts
+                pl.when( (pl.col('contractenddate_991D').is_not_null()) & (pl.col('amount_416A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_open_nonzero_deposits_416A"),
+
+                # Deposit amount
+                pl.col('amount_416A').sum().fill_null(0.0).alias('amount_416A_sum'),
+                # Sum of deposits on still open accounts
+                pl.when( pl.col('contractenddate_991D').is_not_null() ).then(pl.col('amount_416A')).otherwise(0.0).sum().cast(pl.Float64).alias("amount_416A_stillopen_sum"),
+
+                # Account Tenure: Open date of deposit account (first and last). The difference between the current date and the account opening date. Longer tenure could be associated with lower risk.
+                pl.when( pl.col('contractenddate_991D').is_not_null() ).then(pl.col('openingdate_313D')).otherwise(None).min().alias("openingdate_313D_first"),
+                pl.when( pl.col('contractenddate_991D').is_not_null() ).then(pl.col('openingdate_313D')).otherwise(None).max().alias("openingdate_313D_last"),
+
+                # Averaged duration of deposit accounts (that were closed) in years
+                (pl.col('contractenddate_991D') - pl.col('openingdate_313D')).dt.total_days().mean().mul(1.0/365).alias('contractenddate_991D_openingdate_313D_duration'),
+
+            )
+
+        if table_name=='tax_registry_a_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Tax record date (TODO: new date reference?)
+                pl.col('recorddate_4527225D').max().alias('recorddate_4527225D'),
+
+                # Number of Tax amount records
+                pl.when( (pl.col('amount_4527230A').is_not_null()) & (pl.col('amount_4527230A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_4527230A"),
+                pl.col('amount_4527230A').sum().fill_null(0.0).alias('amount_4527230A_sum'),
+                pl.col('amount_4527230A').mean().fill_null(0.0).alias('amount_4527230A_mean'),
+                # tax grows?
+                (pl.col("amount_4527230A").first() / pl.col("amount_4527230A").last()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amount_4527230A_first_last_ratio"),
+
+            )
+            # Ignore: name_4527232M
+
+        if table_name=='tax_registry_b_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Tax record date (TODO: new date reference?)
+                pl.col('deductiondate_4917603D').max().alias('deductiondate_4917603D_last'),
+
+                # Number of Tax amount records
+                pl.when( (pl.col('amount_4917619A').is_not_null()) & (pl.col('amount_4917619A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_4917619A"),
+                pl.col('amount_4917619A').sum().fill_null(0.0).alias('amount_4917619A_sum'),
+                pl.col('amount_4917619A').mean().fill_null(0.0).alias('amount_4917619A_mean'),
+
+                # Duration in days (TODO: drop?)
+                ( pl.col('deductiondate_4917603D').max() - pl.col('deductiondate_4917603D').min()).dt.total_days().fill_null(0).alias('deductiondate_4917603D_duration'),
+
+            )
+            # Ignore: name_4917606M
+
+        if table_name=='tax_registry_c_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                # Tax record date (TODO: new date reference?)
+                pl.col('processingdate_168D').max().alias('processingdate_168D_last'),
+
+                # Number of Tax amount records
+                pl.when( (pl.col('pmtamount_36A').is_not_null()) & (pl.col('pmtamount_36A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmtamount_36A"),
+                pl.col('pmtamount_36A').sum().fill_null(0.0).alias('pmtamount_36A_sum'),
+                pl.col('pmtamount_36A').mean().fill_null(0.0).alias('pmtamount_36A_mean'),
+
+                # Duration in days (TODO: drop?)
+                ( pl.col('processingdate_168D').max() - pl.col('processingdate_168D').min()).dt.total_days().fill_null(0).alias('processingdate_168D_duration'),
+
+            )
+            # Ignore; employername_160M
+
+        if table_name=='other_1':
+            # Aggregating by case_id
+            data = data.group_by('case_id').agg(
+                pl.col('amtdebitincoming_4809443A').sum().fill_null(0.0).alias('amtdebitincoming_4809443A'),
+                pl.col('amtdebitoutgoing_4809440A').sum().fill_null(0.0).alias('amtdebitoutgoing_4809440A'),
+
+                pl.col('amtdepositbalance_4809441A').sum().fill_null(0.0).alias('amtdepositbalance_4809441A'),
+                pl.col('amtdepositincoming_4809444A').sum().fill_null(0.0).alias('amtdepositincoming_4809444A'),
+                pl.col('amtdepositoutgoing_4809442A').sum().fill_null(0.0).alias('amtdepositoutgoing_4809442A'),
+
+                # Transaction Behavior Ratios: Create ratios between incoming and outgoing transactions (e.g., incoming / outgoing). Higher ratios could indicate better financial management.
+                (pl.col("amtdebitincoming_4809443A").sum() / pl.col("amtdebitoutgoing_4809440A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdebitincoming_4809443A_amtdebitoutgoing_4809440A_ratio"),
+                (pl.col("amtdepositincoming_4809444A").sum() / pl.col("amtdepositoutgoing_4809442A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdepositincoming_4809444A_amtdepositoutgoing_4809442A_ratio"),
+
+                # Multiply or divide relevant columns (e.g., balance × incoming deposits).
+                (pl.col("amtdepositbalance_4809441A").sum() / pl.col("amtdebitincoming_4809443A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdepositbalance_4809441A_amtdebitincoming_4809443A_ratio"),
+
+            )
+
         return data
     
     def add_date_features(self, data: pl.DataFrame, ref_date: str, date_cols: list) -> pl.DataFrame:
@@ -1619,7 +1793,6 @@ class CreditRiskProcessing:
                 pl.read_parquet(file)
                 .lazy()
                 .pipe(self.set_table_dtypes)
-                #.pipe(self.encode_categorical_columns, 'debitcard_1')
                 .collect()
                 .pipe(self.aggregate_depth_1, 'debitcard_1')
                 .lazy()
@@ -1627,15 +1800,158 @@ class CreditRiskProcessing:
             dataframes_debitcard_1.append(q.collect())
 
         # Concat the dataframes
-        query_debitcard_1 = pl.concat(dataframes_debitcard_1, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
+        query_debitcard_1 = pl.concat(dataframes_debitcard_1, how='vertical_relaxed')
         del dataframes_debitcard_1
 
         # Join with base
         query_base = query_base.join(query_debitcard_1, on="case_id", how=howtojoin)
 
         #############################################################
+        # Step 6: deposit_1 -> base
+        dataframes_deposit_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_deposit_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                #.pipe(self.encode_categorical_columns, 'deposit_1')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'deposit_1')
+                .lazy()
+            )
+            dataframes_deposit_1.append(q.collect())
 
+        # Concat the dataframes
+        query_deposit_1 = pl.concat(dataframes_deposit_1, how='vertical_relaxed')
+        del dataframes_deposit_1
 
+        # Join with base
+        query_base = query_base.join(query_deposit_1, on="case_id", how=howtojoin)
+
+        #############################################################
+        # Step 7: tax_registry_a_1 -> base
+        dataframes_tax_registry_a_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_tax_registry_a_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .collect()
+                .pipe(self.aggregate_depth_1, 'tax_registry_a_1')
+                .lazy()
+            )
+            dataframes_tax_registry_a_1.append(q.collect())
+
+        # Concat the dataframes
+        query_tax_registry_a_1 = pl.concat(dataframes_tax_registry_a_1, how='vertical_relaxed')
+        del dataframes_tax_registry_a_1
+
+        # Join with base
+        query_base = query_base.join(query_tax_registry_a_1, on="case_id", how=howtojoin)
+
+        #############################################################
+        # Step 8: tax_registry_b_1 -> base
+        dataframes_tax_registry_b_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_tax_registry_b_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .collect()
+                .pipe(self.aggregate_depth_1, 'tax_registry_b_1')
+                .lazy()
+            )
+            dataframes_tax_registry_b_1.append(q.collect())
+
+        # Concat the dataframes
+        query_tax_registry_b_1 = pl.concat(dataframes_tax_registry_b_1, how='vertical_relaxed')
+        del dataframes_tax_registry_b_1
+
+        # Join with base
+        query_base = query_base.join(query_tax_registry_b_1, on="case_id", how=howtojoin)
+
+        #############################################################
+        # Step 9: tax_registry_c_1 -> base
+        dataframes_tax_registry_c_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_tax_registry_c_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                #.pipe(self.encode_categorical_columns, 'tax_registry_c_1')
+                .collect()
+                .pipe(self.aggregate_depth_1, 'tax_registry_c_1')
+                .lazy()
+            )
+            dataframes_tax_registry_c_1.append(q.collect())
+
+        # Concat the dataframes
+        query_tax_registry_c_1 = pl.concat(dataframes_tax_registry_c_1, how='vertical_relaxed')
+        del dataframes_tax_registry_c_1
+
+        # Join with base
+        query_base = query_base.join(query_tax_registry_c_1, on="case_id", how=howtojoin)
+        #############################################################
+        # Step 10 other_1 -> base
+        dataframes_other_1 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_other_1*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .collect()
+                .pipe(self.aggregate_depth_1, 'other_1')
+                .lazy()
+            )
+            dataframes_other_1.append(q.collect())
+
+        # Concat the dataframes
+        query_other_1 = pl.concat(dataframes_other_1, how='vertical_relaxed')
+        del dataframes_other_1
+
+        # Join with base
+        query_base = query_base.join(query_other_1, on="case_id", how=howtojoin)
+        #############################################################
+        # Step 11: static_0 -> base
+        dataframes_static_0 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_static_0*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'static_0')
+                .collect()
+                .lazy()
+            )
+            dataframes_static_0.append(q.collect())
+
+        # Concat the dataframes
+        query_static_0 = pl.concat(dataframes_static_0, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
+        del dataframes_static_0
+
+        # Join with base
+        query_base = query_base.join(query_static_0, on="case_id", how=howtojoin)
+        #############################################################
+        # Step 12: static_cb_0 -> base
+        dataframes_static_cb_0 = []
+        for ifile, file in enumerate(glob.glob(f'{self.data_path}parquet_files/{self.data_type}/{self.data_type}_static_cb_0*.parquet')):
+            q = (
+                pl.read_parquet(file)
+                .lazy()
+                .pipe(self.set_table_dtypes)
+                .pipe(self.encode_categorical_columns, 'static_cb_0')
+                .collect()
+                .lazy()
+            )
+            dataframes_static_cb_0.append(q.collect())
+
+        # Concat the dataframes
+        query_static_cb_0 = pl.concat(dataframes_static_cb_0, how='vertical_relaxed').pipe(self.reduce_memory_usage_pl)
+        del dataframes_static_cb_0
+
+        # Join with base
+        query_base = query_base.join(query_static_cb_0, on="case_id", how=howtojoin)
+        #############################################################
 
 
         # Process the pl.Date columns
@@ -1644,7 +1960,9 @@ class CreditRiskProcessing:
                      'approvaldate_319D_last','creationdate_885D_last',
                     'dateactivated_425D_last','dtlastpmt_581D_last','dtlastpmtallstes_3545839D_last','firstnonzeroinstldate_307D_last',
                     'employedfrom_700D_last','employedfrom_700D_first',
-                    'openingdate_857D_last', 'openingdate_857D_first']
+                    'openingdate_857D_last', 'openingdate_857D_first', 'openingdate_313D_first', 'openingdate_313D_last','recorddate_4527225D',
+                    'deductiondate_4917603D_last','processingdate_168D_last']
+        date_cols += predata.date_static_0_columns
         date_ref = 'date_decision'    # refreshdate_3813885D_max
 
         # Convert 'date_decision' to pl.Date
