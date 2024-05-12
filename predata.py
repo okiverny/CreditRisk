@@ -588,3 +588,68 @@ numeric_static_0 = [
 date_static_0_columns = ['datefirstoffer_1144D', 'datelastinstal40dpd_247D', 'datelastunpaid_3546854D','dtlastpmtallstes_4499206D','firstclxcampaign_1125D','firstdatedue_489D',
                             'lastactivateddate_801D', 'lastapplicationdate_877D','lastapprdate_640D', 'lastdelinqdate_224D', 'lastrejectdate_50D', 'lastrepayingdate_696D',
                             'maxdpdinstldate_3546855D', 'payvacationpostpone_4187118D','validfrom_1069D']
+
+#####################
+requesttype_4525192L_mean_target = {'DEDUCTION_6': 0.04107, 'None': 0.02593, 'PENSION_6': 0.02506, 'SOCIAL_6': 0.03911}
+requesttype_4525192L_frequency = {'DEDUCTION_6': 550387, 'None': 0, 'PENSION_6': 117047, 'SOCIAL_6': 5830}
+
+education_1103M_mean_target = {'39a0853f': 0.05462, '717ddd49': 0.03281, 'c8e1a1d0': 0.03672, '6b2ae0fa': 0.02531, 'a55475b1': 0.03319}
+education_1103M_frequency = {'39a0853f': 47140, '717ddd49': 135342, 'c8e1a1d0': 5583, '6b2ae0fa': 452449, 'a55475b1': 859962}
+
+education_88M_mean_target = {'a55475b1': 0.03128, 'a34a13c8': 0.06865, '717ddd49': 0.0622, '6b2ae0fa': 0.04532, 'c8e1a1d0': 0.06349}
+education_88M_frequency = {'a55475b1': 1484960, 'a34a13c8': 437, '717ddd49': 3280, '6b2ae0fa': 11673, 'c8e1a1d0': 126}
+
+maritalst_385M_mean_target = {'b6cabe76': 0.02562, 'a55475b1': 0.0332, 'a7fcb6e5': 0.03603, '38c061ee': 0.03132, 'ecd83604': 0.04866, '3439d993': 0.02817}
+maritalst_385M_frequency = {'b6cabe76': 55900, 'a55475b1': 661592, 'a7fcb6e5': 201050, '38c061ee': 26851, 'ecd83604': 4747, '3439d993': 550336}
+
+maritalst_893M_mean_target = {'46b968c3': 0.04882, 'ecd83604': 0.05618, '1a19667c': 0.06446, 'e18430ff': 0.0531, '977b2a70': 0.04013, 'a55475b1': 0.03117}
+maritalst_893M_frequency = {'46b968c3': 13889, 'ecd83604': 89, '1a19667c': 5321, 'e18430ff': 678, '977b2a70': 1196, 'a55475b1': 1479303}
+
+riskassesment_302T_mean_target = {'6% - 8%': 0.04144, '8% - 11%': 0.05125, '11% - 15%': 0.06457, 'None': 0.0303, '67% - 100%': 0.19785, '2% - 3%': 0.02115, '50% - 58%': 0.16681, '20% - 25%': 0.10198, '59% - 66%': 0.15763, '33% - 41%': 0.13303, '3% - 4%': 0.02964, '1% - 1%': 0.01097, '2% - 2%': 0.01718, '4% - 6%': 0.0345, '41% - 49%': 0.13796, '15% - 19%': 0.08556, '26% - 33%': 0.11572}
+riskassesment_302T_frequency = {'6% - 8%': 4561, '8% - 11%': 3922, '11% - 15%': 2989, 'None': 0, '67% - 100%': 4549, '2% - 3%': 6147, '50% - 58%': 1187, '20% - 25%': 1569, '59% - 66%': 793, '33% - 41%': 1556, '3% - 4%': 6445, '1% - 1%': 4103, '2% - 2%': 4948, '4% - 6%': 5681, '41% - 49%': 1370, '15% - 19%': 2244, '26% - 33%': 1495}
+riskassesment_302T_probability = {'6% - 8%': 0.07, '8% - 11%': 0.09, '11% - 15%': 0.13, '67% - 100%': 0.835, '2% - 3%': 0.025, '50% - 58%': 0.54, '20% - 25%': 0.235, '59% - 66%': 0.625, '33% - 41%': 0.37, '3% - 4%': 0.035, '1% - 1%': 0.05, '2% - 2%': 0.02, '4% - 6%': 0.05, '41% - 49%': 0.45, '15% - 19%': 0.17, '26% - 33%': 0.295}
+
+
+date_static_cb_0_columns = ['dateofbirth_574D_337D_342D','assignmentdate_238D_4527235D_4955616D', 'responsedate_1012D_4527233D_4917613D']
+
+static_cb_0_dropcols = ['dateofbirth_342D','birthdate_574D','dateofbirth_337D','assignmentdate_238D','assignmentdate_4527235D','assignmentdate_4955616D',
+           'responsedate_1012D','responsedate_4527233D','responsedate_4917613D',
+           'description_5085714M','requesttype_4525192L','education_1103M','education_88M','maritalst_385M','maritalst_893M',
+           'riskassesment_302T']
+
+numeric_static_cb_0 = [
+ 'contractssum_5085716L',
+ 'days120_123L',
+ 'days180_256L',
+ 'days30_165L',
+ 'days360_512L',
+ 'days90_310L',
+ 'firstquarter_103L',
+ 'for3years_128L',
+ 'for3years_504L',
+ 'for3years_584L',
+ 'formonth_118L',
+ 'formonth_206L',
+ 'formonth_535L',
+ 'forquarter_1017L',
+ 'forquarter_462L',
+ 'forquarter_634L',
+ 'fortoday_1092L',
+ 'forweek_1077L',
+ 'forweek_528L',
+ 'forweek_601L',
+ 'foryear_618L',
+ 'foryear_818L',
+ 'foryear_850L',
+ 'fourthquarter_440L',
+ 'numberofqueries_373L',
+ 'pmtaverage_3A',
+ 'pmtaverage_4527227A',
+ 'pmtaverage_4955615A',
+ 'pmtcount_4527229L',
+ 'pmtcount_4955617L',
+ 'pmtcount_693L',
+ 'pmtscount_423L',
+ 'pmtssum_45A',
+ 'secondquarter_766L',
+ 'thirdquarter_1082L']

@@ -559,6 +559,77 @@ class CreditRiskProcessing:
 
             ).drop(droplist)
 
+        if table_name=='static_cb_0':
+            # Adding new columns
+            data = data.with_columns(
+                # Date of birth: combined birthdate_574D, dateofbirth_337D and dateofbirth_342D
+                # TODO: combine with birth_259D_87D from other table
+                pl.max_horizontal(pl.col('birthdate_574D'), pl.col('dateofbirth_337D'), pl.col('dateofbirth_342D')).alias('dateofbirth_574D_337D_342D'),
+
+                # Combine assignment date: assignmentdate_238D and assignmentdate_4527235D
+                pl.max_horizontal(pl.col('assignmentdate_238D'), pl.col('assignmentdate_4527235D'), pl.col('assignmentdate_4955616D')).alias('assignmentdate_238D_4527235D_4955616D'),
+
+                # Combine response date: responsedate_1012D, responsedate_4527233D, responsedate_4917613D
+                pl.max_horizontal(pl.col('responsedate_1012D'), pl.col('responsedate_4527233D'), pl.col('responsedate_4917613D')).alias('responsedate_1012D_4527233D_4917613D'),
+
+                #### pl.String columns
+
+                # Create two binary variables whether the description_5085714M is equal to '2fc785b2' or 'a55475b1'
+                pl.col("description_5085714M").eq('2fc785b2').cast(pl.Int16).alias("description_5085714M_2fc785b2"),
+                pl.col("description_5085714M").eq('a55475b1').cast(pl.Int16).alias("description_5085714M_a55475b1"),
+ 
+                
+                # targets
+                pl.col("requesttype_4525192L").cast(pl.String).fill_null('None').replace(predata.requesttype_4525192L_mean_target, default=None).cast(pl.Float64).alias("requesttype_4525192L_mean_target"),
+                pl.col("requesttype_4525192L").cast(pl.String).fill_null('None').replace(predata.requesttype_4525192L_frequency, default=None).cast(pl.Int64).alias("requesttype_4525192L_frequency"),
+
+                pl.col("education_1103M").replace(predata.education_1103M_mean_target, default=None).cast(pl.Float64).alias("education_1103M_mean_target"),
+                pl.col("education_1103M").replace(predata.education_1103M_frequency, default=None).cast(pl.Int64).alias("education_1103M_frequency"),
+
+                pl.col("education_88M").replace(predata.education_88M_mean_target, default=None).cast(pl.Float64).alias("education_88M_mean_target"),
+                pl.col("education_88M").replace(predata.education_88M_frequency, default=None).cast(pl.Int64).alias("education_88M_frequency"),
+
+                pl.col("maritalst_385M").replace(predata.maritalst_385M_mean_target, default=None).cast(pl.Float64).alias("maritalst_385M_mean_target"),
+                pl.col("maritalst_385M").replace(predata.maritalst_385M_frequency, default=None).cast(pl.Int64).alias("maritalst_385M_frequency"),
+
+                pl.col("maritalst_893M").replace(predata.maritalst_893M_mean_target, default=None).cast(pl.Float64).alias("maritalst_893M_mean_target"),
+                pl.col("maritalst_893M").replace(predata.maritalst_893M_frequency, default=None).cast(pl.Int64).alias("maritalst_893M_frequency"),
+
+                # TODO: try one-hot encoding!
+                pl.col('riskassesment_302T').cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_mean_target, default=None).cast(pl.Float64).alias("riskassesment_302T_mean_target"),
+                pl.col("riskassesment_302T").cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_frequency, default=None).cast(pl.Int64).alias("riskassesment_302T_frequency"),
+                pl.col("riskassesment_302T").cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_probability, default=None).cast(pl.Float64).alias("riskassesment_302T_probability"),
+
+                # riskassesment_940T: String to Float
+                pl.col('riskassesment_940T').cast(pl.Float64, strict=False).alias('riskassesment_940T'),
+
+                ###### Numeric (TODO: split into Float and int?)
+                *[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_cb_0],
+
+
+            ).with_columns(
+                # Difference between assignment date and response date (in days)
+                (pl.col("assignmentdate_238D_4527235D_4955616D") - pl.col("responsedate_1012D_4527233D_4917613D")).dt.total_days().alias("assignmentdate_238D_responsedate_1012D_duration"),
+
+                # Age of a person: <25, 25-35, 35-45, 45-60, >60
+                pl.when(
+                    (pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).le(25.0)
+                ).then(1).otherwise(0).cast(pl.Int16).alias("age_25"),
+                pl.when(
+                   ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).gt(25.0)) & ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).le(35.0))
+                ).then(1).otherwise(0).cast(pl.Int16).alias("age_25_35"),
+                pl.when(
+                   ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).gt(35.0)) & ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).le(45.0))
+                ).then(1).otherwise(0).cast(pl.Int16).alias("age_35_45"),
+                pl.when(
+                   ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).gt(45.0)) & ((pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).le(60.0))
+                ).then(1).otherwise(0).cast(pl.Int16).alias("age_45_60"),
+                pl.when(
+                   (pl.col('assignmentdate_238D_4527235D_4955616D') - pl.col('dateofbirth_574D_337D_342D')).dt.total_days().mul(1.0/365).gt(60.0)
+                ).then(1).otherwise(0).cast(pl.Int16).alias("age_60"),
+
+            ).drop(predata.static_cb_0_dropcols)
+
 
         return data
     
@@ -1963,6 +2034,7 @@ class CreditRiskProcessing:
                     'openingdate_857D_last', 'openingdate_857D_first', 'openingdate_313D_first', 'openingdate_313D_last','recorddate_4527225D',
                     'deductiondate_4917603D_last','processingdate_168D_last']
         date_cols += predata.date_static_0_columns
+        date_cols += predata.date_static_cb_0_columns
         date_ref = 'date_decision'    # refreshdate_3813885D_max
 
         # Convert 'date_decision' to pl.Date
