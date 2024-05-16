@@ -433,7 +433,7 @@ class CreditRiskProcessing:
 
             ).with_columns(
                 # average between housetype_905L_mean_target and housetype_905L_mean_target
-                (pl.col("housetype_905L_mean_target") + pl.col("housingtype_772L_mean_target")).mul(0.5).cast(pl.Float64).alias("housetype_905L_772L_mean_target"),
+                (pl.col("housetype_905L_mean_target").fill_null(0.0) + pl.col("housingtype_772L_mean_target").fill_null(0.0)).mul(0.5).cast(pl.Float64).alias("housetype_905L_772L_mean_target"),
                 
             ).drop(["housetype_905L_mean_target","housetype_905L_mean_target"])
 
@@ -482,10 +482,11 @@ class CreditRiskProcessing:
         if table_name=='static_0':
 
             cardtype_51L_unique = ['PERSONALIZED', 'INSTANT']
+            credtype_322L_unique = ['REL', 'CAL', 'COL']
 
             droplist = ['twobodfilling_608L','cardtype_51L','disbursementtype_67L','inittransactioncode_186L','lastapprcommoditycat_1041M','lastapprcommoditytypec_5251766M',
                     'lastcancelreason_561M','lastrejectcommoditycat_161M','lastrejectcommodtypec_5251769M','lastrejectreason_759M','lastrejectreason_759M',
-                    'lastrejectreasonclient_4145040M','lastrejectreasonclient_4145040M','lastst_736L','previouscontdistrict_112M']
+                    'lastrejectreasonclient_4145040M','lastrejectreasonclient_4145040M','lastst_736L','previouscontdistrict_112M', 'credtype_322L']
             
             
             bool_columns = ['equalitydataagreement_891L','equalityempfrom_62L','isbidproduct_1095L','isbidproductrequest_292L','isdebitcard_729L','opencred_647L']
@@ -504,6 +505,9 @@ class CreditRiskProcessing:
 
                 pl.col("typesuite_864L").cast(pl.String).eq('AL').cast(pl.Int16).alias("typesuite_864L"),
                 
+                pl.col("credtype_322L").cast(pl.String).fill_null('None').replace(predata.credtype_322L_mean_target, default=None).cast(pl.Float64).alias("credtype_322L_mean_target"),
+                pl.col("credtype_322L").cast(pl.String).fill_null('None').replace(predata.credtype_322L_frequency, default=None).cast(pl.Int64).alias("credtype_322L_frequency"),
+
 
                 pl.col("cardtype_51L").cast(pl.String).fill_null('None').replace(predata.cardtype_51L_mean_target, default=None).cast(pl.Float64).alias("cardtype_51L_mean_target"),
                 pl.col("cardtype_51L").cast(pl.String).fill_null('None').replace(predata.cardtype_51L_frequency, default=None).cast(pl.Int64).alias("cardtype_51L_frequency"),
@@ -545,8 +549,11 @@ class CreditRiskProcessing:
                 # one-hot-encoded columns for cardtype_51L
                 *[pl.col("cardtype_51L").cast(pl.String).eq(cardtype).cast(pl.Int16).alias(f"cardtype_51L_{cardtype}") for cardtype in cardtype_51L_unique],
 
+                # one-hot-encoded columns for credtype_322L
+                *[pl.col("credtype_322L").cast(pl.String).eq(credtype).cast(pl.Int16).alias(f"credtype_322L_{credtype}") for credtype in credtype_322L_unique],
+
                 ###### pl.Boolean
-                *[pl.col(col).cast(pl.Int8, strict=False).alias(col) for col in bool_columns],
+                *[pl.col(col).cast(pl.Int8, strict=False).fill_null(-1).alias(col) for col in bool_columns],
 
                 ###### pl.Date
                 *[pl.col(col).alias(col) for col in predata.date_static_0_columns],
@@ -595,10 +602,13 @@ class CreditRiskProcessing:
                 pl.col("maritalst_893M").replace(predata.maritalst_893M_mean_target, default=None).cast(pl.Float64).alias("maritalst_893M_mean_target"),
                 pl.col("maritalst_893M").replace(predata.maritalst_893M_frequency, default=None).cast(pl.Int64).alias("maritalst_893M_frequency"),
 
-                # TODO: try one-hot encoding!
+                # TODO: try one-hot encoding! (done)
                 pl.col('riskassesment_302T').cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_mean_target, default=None).cast(pl.Float64).alias("riskassesment_302T_mean_target"),
                 pl.col("riskassesment_302T").cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_frequency, default=None).cast(pl.Int64).alias("riskassesment_302T_frequency"),
                 pl.col("riskassesment_302T").cast(pl.String).fill_null('None').replace(predata.riskassesment_302T_probability, default=None).cast(pl.Float64).alias("riskassesment_302T_probability"),
+                # One-hot-encoding for riskassesment_302T
+                *[pl.col("riskassesment_302T").cast(pl.String).fill_null('None').eq(riskassesment).cast(pl.Int16).alias(f"riskassesment_302T_{predata.riskassesment_302T_categorical_encoding[riskassesment]}") for riskassesment in predata.riskassesment_302T_unique],
+
 
                 # riskassesment_940T: String to Float
                 pl.col('riskassesment_940T').cast(pl.Float64, strict=False).alias('riskassesment_940T'),
@@ -656,7 +666,7 @@ class CreditRiskProcessing:
                     # The most influential role
                     pl.col("relatedpersons_role_encoded").max().alias("most_influential_role"),
                     # Start date of employment
-                    pl.col("empls_employedfrom_796D").first().alias('empls_employedfrom_796D'),
+                    pl.col("empls_employedfrom_796D").drop_nulls().first().alias('empls_employedfrom_796D'),
                     # Various mean_target columns
                     *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
                     # Various frequency columns
@@ -1666,6 +1676,17 @@ class CreditRiskProcessing:
         """
         data = data.with_columns(                
                 *[ (pl.col(ref_date) - pl.col(col)).dt.total_days().fill_null(0.0).alias(col) for col in date_cols ],
+        ).with_columns(
+            # Convert 'date_decision' to day of week
+            pl.col(ref_date).dt.weekday().cast(pl.Int8, strict=False).alias('date_decision_weekday'),
+            # Convert 'date_decision' to month
+            pl.col(ref_date).dt.month().cast(pl.Int8, strict=False).alias('date_decision_month'),
+            # Convert 'date_decision' to year
+            #pl.col(ref_date).dt.year().cast(pl.Int16, strict=False).alias('date_decision_year'),
+            # Convert 'date_decision' to quarter
+            pl.col(ref_date).dt.quarter().cast(pl.Int8, strict=False).alias('date_decision_quarter'),
+            # Convert 'date_decision' to week of year
+            pl.col(ref_date).dt.week().cast(pl.Int16, strict=False).alias('date_decision_week'),
         ).drop(ref_date)
 
         return data
@@ -2047,7 +2068,7 @@ class CreditRiskProcessing:
            query_base = query_base.filter(~pl.all_horizontal(pl.col(*cols_pred).is_null()))
 
         # Fill all null values and NaN values with 0
-        query_base = query_base.fill_null(0).fill_nan(0)   # .with_columns(cs.numeric().replace(float("inf"),0.0))
+        query_base = query_base.fill_nan(0)   # .fill_null(0)   .with_columns(cs.numeric().replace(float("inf"),0.0))
 
 
 
