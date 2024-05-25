@@ -222,8 +222,10 @@ class CreditRiskProcessing:
 
             data = data.with_columns(
                 # Fill null with 0 for pmts_dpdvalue_108P column
-                pl.col("pmts_dpdvalue_108P").fill_null(0).alias("pmts_dpdvalue_108P"),
-                pl.col("pmts_pmtsoverdue_635A").fill_null(0).alias("pmts_pmtsoverdue_635A"),
+                # pl.col("pmts_dpdvalue_108P").fill_null(0).alias("pmts_dpdvalue_108P"),
+                # pl.col("pmts_pmtsoverdue_635A").fill_null(0).alias("pmts_pmtsoverdue_635A"),
+                pl.col("pmts_dpdvalue_108P").alias("pmts_dpdvalue_108P"),
+                pl.col("pmts_pmtsoverdue_635A").alias("pmts_pmtsoverdue_635A"),
             )
 
         if table_name=='credit_bureau_b_1':
@@ -610,13 +612,15 @@ class CreditRiskProcessing:
                 *[pl.col("credtype_322L").cast(pl.String).eq(credtype).cast(pl.Int16).alias(f"credtype_322L_{credtype}") for credtype in credtype_322L_unique],
 
                 ###### pl.Boolean
-                *[pl.col(col).cast(pl.Int8, strict=False).fill_null(-1).alias(col) for col in bool_columns],
+                #*[pl.col(col).cast(pl.Int8, strict=False).fill_null(-1).alias(col) for col in bool_columns],
+                *[pl.col(col).cast(pl.Int8, strict=False).alias(col) for col in bool_columns],
 
                 ###### pl.Date
                 *[pl.col(col).alias(col) for col in predata.date_static_0_columns],
 
                 ###### Numeric (TODO: split into Float and int?)
-                *[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_0],
+                #*[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_0],
+                *[pl.col(col).cast(pl.Float64, strict=False).alias(col) for col in predata.numeric_static_0],
 
                 # case_id
                 pl.col('case_id').cast(pl.Int64).alias('case_id'),
@@ -676,7 +680,8 @@ class CreditRiskProcessing:
                 pl.col('riskassesment_940T').cast(pl.Float64, strict=False).alias('riskassesment_940T'),
 
                 ###### Numeric (TODO: split into Float and int?)
-                *[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_cb_0],
+                #*[pl.col(col).cast(pl.Float64, strict=False).fill_null(0.0).alias(col) for col in predata.numeric_static_cb_0],
+                *[pl.col(col).cast(pl.Float64, strict=False).alias(col) for col in predata.numeric_static_cb_0],
 
 
             ).with_columns(
@@ -891,7 +896,7 @@ class CreditRiskProcessing:
                 pl.col("pmts_dpdvalue_108P").last().alias("pmts_dpdvalue_108P_last"),
                 pl.col("pmts_dpdvalue_108P").filter(
                         (pl.col("pmts_dpdvalue_108P").is_not_null()) & (pl.col("pmts_dpdvalue_108P").gt(0.0))
-                    ).arg_max().fill_null(-1).alias("pmts_dpdvalue_108P_maxidx"),
+                    ).arg_max().alias("pmts_dpdvalue_108P_maxidx"),
                 # TODO: check here which positive trend is better
                 #(pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last()).alias("pmts_dpdvalue_108P_pos"),
                 ((pl.col("pmts_dpdvalue_108P").max() - pl.col("pmts_dpdvalue_108P").last())/pl.col("pmts_dpdvalue_108P").max()).fill_nan(1.0).alias("pmts_dpdvalue_108P_pos"),
@@ -901,7 +906,7 @@ class CreditRiskProcessing:
                 pl.col("pmts_pmtsoverdue_635A").last().alias("pmts_pmtsoverdue_635A_last"),
                 pl.col("pmts_pmtsoverdue_635A").filter(
                         (pl.col("pmts_pmtsoverdue_635A").is_not_null()) & (pl.col("pmts_pmtsoverdue_635A").gt(0.0))
-                    ).arg_max().fill_null(-1).alias("pmts_pmtsoverdue_635A_maxidx"),
+                    ).arg_max().alias("pmts_pmtsoverdue_635A_maxidx"),
                 ((pl.col("pmts_pmtsoverdue_635A").max() - pl.col("pmts_pmtsoverdue_635A").last())/pl.col("pmts_pmtsoverdue_635A").max()).fill_nan(1.0).alias("pmts_pmtsoverdue_635A_pos"),
         
 
@@ -947,39 +952,39 @@ class CreditRiskProcessing:
                 # Create new features from summary columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                        ).max().alias(col+"_max") for col in summary_columns],
                 
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+                        ).sum().alias(col+"_sum") for col in summary_columns],
 
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+                        ).mean().alias(col+"_mean") for col in summary_columns],
 
-                #*[pl.col(col).cast(pl.Float64).filter(
-                #        (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                #        ).median().fill_null(0.0).alias(col+"_median") for col in summary_columns],
+                *[pl.col(col).cast(pl.Float64).filter(
+                       (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
+                       ).median().alias(col+"_median") for col in summary_columns],
 
                 # Create mean values for columns in mean_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+                        ).mean().alias(col+"_mean") for col in mean_columns],
 
                 # Create columns with sum values from sum_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+                        ).sum().alias(col+"_sum") for col in sum_columns],
 
                 # Create columns with max values from max_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+                        ).max().alias(col+"_max") for col in max_columns],
 
                 # Create columns with min values from min_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+                        ).min().alias(col+"_min") for col in min_columns],
 
 
                 # A binary feature indicating whether a column has at least one missing value (null)
@@ -988,48 +993,48 @@ class CreditRiskProcessing:
                 (pl.col("totalamount_881A").is_null()).any().cast(pl.Int16).alias("totalamount_881A_null"),
                 
                 # Credit Utilization Ratio: ratio of amount_1115A to totalamount_503A 
-                (pl.col("amount_1115A") / pl.col("totalamount_503A")).fill_null(0.0).replace(float("inf"),0.0).max().alias("amount_1115A_totalamount_503A_ratio_max"),
-                (pl.col("amount_1115A").fill_null(0.0).max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("amount_1115A_credlmt_3940954A_ratio"),
-                (pl.col("amount_1115A").fill_null(0.0) / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("amount_1115A_credlmt_3940954A_ratio_max"),
-                (pl.col("amount_1115A").fill_null(0.0).max() / pl.col("credlmt_1052A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("amount_1115A_credlmt_1052A_ratio"),
-                (pl.col("amount_1115A").fill_null(0.0) / pl.col("credlmt_1052A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("amount_1115A_credlmt_1052A_ratio_max"),
+                (pl.col("amount_1115A") / pl.col("totalamount_503A")).fill_null(0.0).replace(float("inf"), None).max().alias("amount_1115A_totalamount_503A_ratio_max"),
+                (pl.col("amount_1115A").max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"), None).fill_nan(None).alias("amount_1115A_credlmt_3940954A_ratio"),
+                (pl.col("amount_1115A") / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),None).fill_nan(None).max().alias("amount_1115A_credlmt_3940954A_ratio_max"),
+                (pl.col("amount_1115A").max() / pl.col("credlmt_1052A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("amount_1115A_credlmt_1052A_ratio"),
+                (pl.col("amount_1115A") / pl.col("credlmt_1052A").fill_null(0.0)).replace(float("inf"),None).fill_nan(None).max().alias("amount_1115A_credlmt_1052A_ratio_max"),
         
 
                 # Compute the absolute difference between totalamount_503A and amount_1115A.
-                (pl.col("totalamount_503A").fill_null(0.0) - pl.col("amount_1115A").fill_null(0.0)).abs().max().alias("totalamount_503A_max_diff"),
+                (pl.col("totalamount_503A") - pl.col("amount_1115A")).abs().max().alias("totalamount_503A_max_diff"),
                 # Difference in Credit Limits
-                (pl.col("credlmt_3940954A").fill_null(0.0) - pl.col("credlmt_228A").fill_null(0.0)).max().alias("credlmt_3940954A_credlmt_228A_diff_max"),
-                (pl.col("credlmt_3940954A").fill_null(0.0) - pl.col("credlmt_1052A").fill_null(0.0)).max().alias("credlmt_3940954A_credlmt_1052A_diff_max"),
-                (pl.col("credlmt_3940954A").fill_null(0.0).max() - pl.col("credlmt_228A").fill_null(0.0).max()).alias("credlmt_3940954A_credlmt_228A_diff"),
-                (pl.col("credlmt_3940954A").fill_null(0.0).max() - pl.col("credlmt_1052A").fill_null(0.0).max()).alias("credlmt_3940954A_credlmt_1052A_diff"),
+                (pl.col("credlmt_3940954A") - pl.col("credlmt_228A")).max().alias("credlmt_3940954A_credlmt_228A_diff_max"),
+                (pl.col("credlmt_3940954A") - pl.col("credlmt_1052A")).max().alias("credlmt_3940954A_credlmt_1052A_diff_max"),
+                (pl.col("credlmt_3940954A").max() - pl.col("credlmt_228A").max()).alias("credlmt_3940954A_credlmt_228A_diff"),
+                (pl.col("credlmt_3940954A").max() - pl.col("credlmt_1052A").max()).alias("credlmt_3940954A_credlmt_1052A_diff"),
 
                 # TODO: Log Transformations: If the credit amounts have a wide range, consider taking the logarithm to normalize the distribution.
 
                 # Max value of totalamount_503A over totalamount_881A
-                (pl.col("totalamount_503A").fill_null(0.0).max() / pl.col("totalamount_881A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("totalamount_503A_881A"),
+                (pl.col("totalamount_503A").max() / pl.col("totalamount_881A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("totalamount_503A_881A"),
 
                 ## Columns with years
                 #*[pl.col(col).cast(pl.Float64).max().fill_null(0.0).alias(col+"_last") for col in year_columns],
                 #*[(pl.col(col).cast(pl.Float64).max() - pl.col(col).cast(pl.Float64).min()).fill_null(0.0).alias(col+"_duration") for col in year_columns],
 
                 # Overdue-to-Installment Ratio
-                (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("installmentamount_833A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_installmentamount_833A_ratio"),
-                (pl.col("overdueamountmax_950A").fill_null(0.0).max() / pl.col("instlamount_892A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("overdueamountmax_950A_instlamount_892A_ratio"),
+                (pl.col("overdueamountmax_950A").max() / pl.col("installmentamount_833A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("overdueamountmax_950A_installmentamount_833A_ratio"),
+                (pl.col("overdueamountmax_950A").max() / pl.col("instlamount_892A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("overdueamountmax_950A_instlamount_892A_ratio"),
                 
                 # Residual-to-Credit Limit Ratio
-                (pl.col("residualamount_3940956A").fill_null(0.0).max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("residualamount_3940956A_credlmt_3940954A_ratio"),
-                (pl.col("residualamount_3940956A").fill_null(0.0) / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).max().alias("residualamount_3940956A_credlmt_3940954A_ratio_max"),
+                (pl.col("residualamount_3940956A").max() / pl.col("credlmt_3940954A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("residualamount_3940956A_credlmt_3940954A_ratio"),
+                (pl.col("residualamount_3940956A") / pl.col("credlmt_3940954A").fill_null(0.0)).replace(float("inf"),None).fill_nan(None).max().alias("residualamount_3940956A_credlmt_3940954A_ratio_max"),
         
                 # Create a binary feature indicating whether the maximum debt occurred recently (e.g., within the last month or quarter) based on maxdebtpduevalodued_3940955A
                 (pl.col("maxdebtpduevalodued_3940955A").filter(
                         (pl.col("maxdebtpduevalodued_3940955A").is_not_null()) & (pl.col("maxdebtpduevalodued_3940955A").gt(0.0))
-                    ).min() < 120.0).fill_null(False).cast(pl.Int16).alias("maxdebtpduevalodued_3940955A_isrecent"),
+                    ).min() < 120.0).cast(pl.Int16).alias("maxdebtpduevalodued_3940955A_isrecent"),
 
                 # TODO Debt-to-Income Ratio: Divide the outstanding debt amount (debtvalue_227A) by the client’s income (if available). This ratio provides insights into a client’s ability to manage debt relative to their income.
 
                 # Past Due Ratio: Calculate the ratio of unpaid debt (debtpastduevalue_732A) to the total outstanding debt (debtvalue_227A). High past due ratios may indicate higher credit risk.
-                (pl.col("debtpastduevalue_732A").fill_null(0.0).max() / pl.col("debtvalue_227A").fill_null(0.0).max()).replace(float("inf"),0.0).fill_nan(0.0).alias("debtpastduevalue_732A_debtvalue_227A_ratio"),
-                (pl.col("debtpastduevalue_732A").fill_null(0.0) / pl.col("debtvalue_227A").fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).max().alias("debtpastduevalue_732A_debtvalue_227A_ratio_max"),
+                (pl.col("debtpastduevalue_732A").max() / pl.col("debtvalue_227A").fill_null(0.0).max()).replace(float("inf"),None).fill_nan(None).alias("debtpastduevalue_732A_debtvalue_227A_ratio"),
+                (pl.col("debtpastduevalue_732A") / pl.col("debtvalue_227A").fill_null(0.0)).replace(float("inf"), None).fill_nan(None).max().alias("debtpastduevalue_732A_debtvalue_227A_ratio_max"),
 
 
                 # Number of non-null and greater than 0.0 values in dpd_550P, dpd_733P and dpdmax_851P columns
@@ -1040,24 +1045,24 @@ class CreditRiskProcessing:
 
                 # Columns for month (dpdmaxdatemonth_804T) and years (dpdmaxdateyear_742T)
                 (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max() - 
-                    pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).min()).dt.total_days().fill_null(0.0).alias("dpdmaxdate_duration"),
-                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.year().fill_null(0.0).alias("dpdmaxdateyear_742T_last"),
-                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.month().fill_null(0.0).alias("dpdmaxdatemonth_804T_last"),
+                    pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).min()).dt.total_days().alias("dpdmaxdate_duration"),
+                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.year().alias("dpdmaxdateyear_742T_last"),
+                (pl.date(pl.col("dpdmaxdateyear_742T").cast(pl.Float64),pl.col("dpdmaxdatemonth_804T").cast(pl.Float64), 1).max()).dt.month().alias("dpdmaxdatemonth_804T_last"),
 
                 # Columns for month (overdueamountmaxdatemonth_494T) and years (overdueamountmaxdateyear_432T)
                 (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max() - 
-                    pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).min()).dt.total_days().fill_null(0.0).alias("overdueamountmaxdat_duration"),
-                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.year().fill_null(0.0).alias("overdueamountmaxdateyear_432T_last"),
-                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.month().fill_null(0.0).alias("overdueamountmaxdatemonth_494T_last"),
+                    pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).min()).dt.total_days().alias("overdueamountmaxdat_duration"),
+                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.year().alias("overdueamountmaxdateyear_432T_last"),
+                (pl.date(pl.col("overdueamountmaxdateyear_432T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_494T").cast(pl.Float64), 1).max()).dt.month().alias("overdueamountmaxdatemonth_494T_last"),
 
                 # Durations: last update - contract date
-                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().min().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_min'),
-                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().max().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_max'),
-                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().mean().fill_null(0.0).alias('lastupdate_260D_contractdate_551D_diff_mean'),
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().min().alias('lastupdate_260D_contractdate_551D_diff_min'),
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().max().alias('lastupdate_260D_contractdate_551D_diff_max'),
+                (pl.col("lastupdate_260D") - pl.col("contractdate_551D")).dt.total_days().mean().alias('lastupdate_260D_contractdate_551D_diff_mean'),
                 # Duration:  contract maturity date - last update
-                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().min().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_min'),
-                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().max().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_max'),
-                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().mean().fill_null(0.0).alias('contractmaturitydate_151D_lastupdate_260D_diff_mean'),
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().min().alias('contractmaturitydate_151D_lastupdate_260D_diff_min'),
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().max().alias('contractmaturitydate_151D_lastupdate_260D_diff_max'),
+                (pl.col("contractmaturitydate_151D") - pl.col("lastupdate_260D")).dt.total_days().mean().alias('contractmaturitydate_151D_lastupdate_260D_diff_mean'),
 
                 # Various mean_target columns
                 *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
@@ -1138,131 +1143,131 @@ class CreditRiskProcessing:
                 # Create new features from summary columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                        ).max().alias(col+"_max") for col in summary_columns],
                 
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+                        ).sum().alias(col+"_sum") for col in summary_columns],
 
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+                        ).mean().alias(col+"_mean") for col in summary_columns],
 
                 # Create mean values for columns in mean_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+                        ).mean().alias(col+"_mean") for col in mean_columns],
 
                 # Create std values for columns in std_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).std().fill_null(0.0).alias(col+"_std") for col in std_columns],
+                        ).std().alias(col+"_std") for col in std_columns],
 
                 # Create columns with sum values from sum_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+                        ).sum().alias(col+"_sum") for col in sum_columns],
 
                 # Create columns with max values from max_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+                        ).max().alias(col+"_max") for col in max_columns],
 
                 # Create columns with min values from min_columns
                 *[pl.col(col).cast(pl.Float64).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+                        ).min().alias(col+"_min") for col in min_columns],
 
                 
                 # Diffs
-                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).sum().fill_null(0.0) - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).alias('annualeffectiverate_63L_199L_sum_diff'),
-                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('annualeffectiverate_63L_199L_mean_diff'),
+                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).sum() - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).sum()).alias('annualeffectiverate_63L_199L_sum_diff'),
+                (pl.col('annualeffectiverate_63L').cast(pl.Float64,strict=False).mean() - pl.col('annualeffectiverate_199L').cast(pl.Float64,strict=False).mean()).alias('annualeffectiverate_63L_199L_mean_diff'),
 
-                (pl.col('credlmt_935A').sum().fill_null(0.0) - pl.col('credlmt_230A').sum().fill_null(0.0)).alias('credlmt_935A_1230A_sum_diff'),
-                (pl.col('credlmt_935A').mean().fill_null(0.0) - pl.col('credlmt_230A').mean().fill_null(0.0)).alias('credlmt_935A_230A_mean_diff'),
+                (pl.col('credlmt_935A').sum() - pl.col('credlmt_230A').sum()).alias('credlmt_935A_1230A_sum_diff'),
+                (pl.col('credlmt_935A').mean() - pl.col('credlmt_230A').mean()).alias('credlmt_935A_230A_mean_diff'),
 
                 # Interest Rate Spread: Calculate the difference between the nominal interest rates for active and closed contracts. This spread could be indicative of risk.
-                (pl.col('nominalrate_281L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('nominalrate_498L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('nominalrate_281L_498L_mean_diff'),
+                (pl.col('nominalrate_281L').cast(pl.Float64,strict=False).mean() - pl.col('nominalrate_498L').cast(pl.Float64,strict=False).mean()).alias('nominalrate_281L_498L_mean_diff'),
 
                 # Contract Sum Spread: Calculate the difference between the sum of active and closed contracts. This spread could be indicative of risk.
-                (pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean().fill_null(0.0) - pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).alias('contractsum_5085717L_mean_diff'),
+                (pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean() - pl.col('contractsum_5085717L').cast(pl.Float64,strict=False).mean()).alias('contractsum_5085717L_mean_diff'),
 
                 # DPD Spread: Calculate the difference between the maximum DPD values for active and closed contracts. This spread could be indicative of risk.
-                (pl.col('dpdmax_139P').mean().fill_null(0.0) - pl.col('dpdmax_757P').mean().fill_null(0.0)).alias('dpdmax_139P_757P_mean_diff'),
+                (pl.col('dpdmax_139P').mean() - pl.col('dpdmax_757P').mean()).alias('dpdmax_139P_757P_mean_diff'),
 
                 # Instalment Difference
-                (pl.col('instlamount_768A').sum().fill_null(0.0) - pl.col('instlamount_852A').sum().fill_null(0.0)).alias('instlamount_768A_852A_diff'),
+                (pl.col('instlamount_768A').sum() - pl.col('instlamount_852A').sum()).alias('instlamount_768A_852A_diff'),
 
                 # Overdue Percentage: Calculate the percentage of overdue debt (debtoverdue_47A) relative to the total outstanding debt (debtoutstand_525A). High percentages may signal credit risk.
-                (pl.col('debtoverdue_47A').sum().fill_null(0.0) / pl.col('debtoutstand_525A').sum().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('debtoverdue_47A_debtoutstand_525A_ratio'),
+                (pl.col('debtoverdue_47A').sum() / pl.col('debtoutstand_525A').sum().fill_null(0.0)).replace(float("inf"),None).fill_nan(None).alias('debtoverdue_47A_debtoutstand_525A_ratio'),
                 
                 # Debt Utilization: Divide the outstanding debt by the credit limit. High utilization ratios may indicate risk.
-                (pl.col('debtoutstand_525A').sum().fill_null(0.0) / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('debtoutstand_525A_credlmt_935A_ratio'),
+                (pl.col('debtoutstand_525A').sum() / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('debtoutstand_525A_credlmt_935A_ratio'),
 
                 # Instalment Coverage Ratio: Divide the total amount paid (instlamount_852A) by the total amount due (instlamount_768A). A higher ratio suggests better payment behavior.
-                (pl.col('instlamount_852A').sum().fill_null(0.0) / pl.col('instlamount_768A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('instlamount_852A_768A_ratio'),
+                (pl.col('instlamount_852A').sum() / pl.col('instlamount_768A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('instlamount_852A_768A_ratio'),
 
                 # Instalment Difference: Calculate the difference between monthlyinstlamount_674A and monthlyinstlamount_332A. A larger difference could be relevant for risk assessment.
-                (pl.col('monthlyinstlamount_332A').sum().fill_null(0.0) - pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).alias('monthlyinstlamount_332A_674A_diff'),
+                (pl.col('monthlyinstlamount_332A').sum() - pl.col('monthlyinstlamount_674A').sum()).alias('monthlyinstlamount_332A_674A_diff'),
 
                 # Instalment Coverage Ratio: Divide the total amount paid (monthlyinstlamount_674A) by the total amount due (monthlyinstlamount_332A). A higher ratio suggests better payment behavior.
-                (pl.col('monthlyinstlamount_332A').sum().fill_null(0.0) / pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('monthlyinstlamount_332A_674A_ratio'),
+                (pl.col('monthlyinstlamount_332A').sum() / pl.col('monthlyinstlamount_674A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('monthlyinstlamount_332A_674A_ratio'),
 
                 # Instalment Stability: Compare the number of instalments for active contracts with the average number of instalments for closed contracts. A significant deviation might indicate instability.
-                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_sum_ratio'),
-                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).mean().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).replace(float("inf"),0.0).fill_nan(0.0).alias('numberofinstls_320L_229L_mean_ratio'),
+                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"),None).fill_nan(None).alias('numberofinstls_320L_229L_sum_ratio'),
+                (pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).mean() / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).mean().fill_null(0.0)).replace(float("inf"),None).fill_nan(None).alias('numberofinstls_320L_229L_mean_ratio'),
 
                 # the ratio of the actual number of outstanding instalments 'numberofoutstandinstls_59L' to the total number of instalments 'numberofinstls_320L' for active contracts.
-                (pl.col('numberofoutstandinstls_59L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_59L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoutstandinstls_59L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoutstandinstls_59L_numberofinstls_320L_ratio'),
                 # the ratio of the actual number of outstanding instalments 'numberofoutstandinstls_520L' to the total number of instalments 'numberofinstls_229L' for closed contracts.
-                (pl.col('numberofoutstandinstls_520L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoutstandinstls_520L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoutstandinstls_520L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoutstandinstls_520L_numberofinstls_229L_ratio'),
 
                 # Ratio of numberofoverdueinstlmax_1039L to numberofinstls_320L for active contract
-                (pl.col('numberofoverdueinstlmax_1039L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1039L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoverdueinstlmax_1039L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoverdueinstlmax_1039L_numberofinstls_320L_ratio'),
                 # Ratio of numberofoverdueinstlmax_1039L to numberofinstls_229L for closed contract
-                (pl.col('numberofoverdueinstlmax_1151L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstlmax_1151L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoverdueinstlmax_1151L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoverdueinstlmax_1151L_numberofinstls_229L_ratio'),
 
                 # the ratio of the actual number of overdue instalments 'numberofoverdueinstls_725L' to the total number of instalments 'numberofinstls_320L' for active contracts.
-                (pl.col('numberofoverdueinstls_725L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_725L_numberofinstls_320L_ratio'),
+                (pl.col('numberofoverdueinstls_725L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_320L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoverdueinstls_725L_numberofinstls_320L_ratio'),
                 # the ratio of the actual number of overdue instalments 'numberofoverdueinstls_834L' to the total number of instalments 'numberofinstls_229L' for closed contracts.
-                (pl.col('numberofoverdueinstls_834L').cast(pl.Float64,strict=False).sum().fill_null(0.0) / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('numberofoverdueinstls_834L_numberofinstls_229L_ratio'),
+                (pl.col('numberofoverdueinstls_834L').cast(pl.Float64,strict=False).sum() / pl.col('numberofinstls_229L').cast(pl.Float64,strict=False).sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('numberofoverdueinstls_834L_numberofinstls_229L_ratio'),
 
                 # Ratio of outstanding amount outstandingamount_354A to credit limit credlmt_230A for closed contracts
-                (pl.col('outstandingamount_354A').sum().fill_null(0.0) / pl.col('credlmt_230A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('outstandingamount_354A_credlmt_230A_ratio'),
+                (pl.col('outstandingamount_354A').sum() / pl.col('credlmt_230A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('outstandingamount_354A_credlmt_230A_ratio'),
                 # Ratio of outstanding amount outstandingamount_362A to credit limit credlmt_935A for active contracts
-                (pl.col('outstandingamount_362A').sum().fill_null(0.0) / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('outstandingamount_362A_credlmt_935A_ratio'),
+                (pl.col('outstandingamount_362A').sum() / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('outstandingamount_362A_credlmt_935A_ratio'),
 
                 # Ratio of overdue amount overdueamount_31A to outstanding amount outstandingamount_354A for closed contracts
-                (pl.col('overdueamount_31A').sum().fill_null(0.0) / pl.col('outstandingamount_354A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('overdueamount_31A_outstandingamount_354A_ratio'),
+                (pl.col('overdueamount_31A').sum() / pl.col('outstandingamount_354A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('overdueamount_31A_outstandingamount_354A_ratio'),
                 # Ratio of overdue amount overdueamount_659A to outstanding amount outstandingamount_362A for active contracts
-                (pl.col('overdueamount_659A').sum().fill_null(0.0) / pl.col('outstandingamount_362A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('overdueamount_659A_outstandingamount_362A_ratio'),
+                (pl.col('overdueamount_659A').sum() / pl.col('outstandingamount_362A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('overdueamount_659A_outstandingamount_362A_ratio'),
 
                 # Residual Ratio: Compute the ratio between residualamount_856A and residualamount_488A.
-                (pl.col('residualamount_856A').sum().fill_null(0.0) / pl.col('residualamount_488A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('residualamount_856A_488A_ratio'),
+                (pl.col('residualamount_856A').sum() / pl.col('residualamount_488A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('residualamount_856A_488A_ratio'),
                 # Normalized Residual Amounts: Calculate the normalized residual amounts by dividing each residual amount by the credit limit
-                (pl.col('residualamount_856A').sum().fill_null(0.0) / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('residualamount_856A_credlmt_935A_ratio'),
-                (pl.col('residualamount_488A').sum().fill_null(0.0) / pl.col('credlmt_230A').sum().fill_null(0.0)).replace(float("inf"), 0.0).fill_nan(0.0).alias('residualamount_488A_credlmt_230A_ratio'),
+                (pl.col('residualamount_856A').sum() / pl.col('credlmt_935A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('residualamount_856A_credlmt_935A_ratio'),
+                (pl.col('residualamount_488A').sum() / pl.col('credlmt_230A').sum().fill_null(0.0)).replace(float("inf"), None).fill_nan(None).alias('residualamount_488A_credlmt_230A_ratio'),
 
                 # Contract Status Proportion: Calculate the proportion of active contracts (totalamount_996A) relative to the total (totalamount_996A + totalamount_6A) contracts.
-                (pl.col('totalamount_6A').sum().fill_null(0.0) / (pl.col('totalamount_996A').sum().fill_null(0.0) + pl.col('totalamount_6A').sum().fill_null(0.0))).replace(float("inf"), 0.0).fill_nan(0.0).alias('totalamount_6A_totalamount_996A_ratio'),
+                (pl.col('totalamount_6A').sum() / (pl.col('totalamount_996A').sum().fill_null(0.0) + pl.col('totalamount_6A').sum().fill_null(0.0))).replace(float("inf"), None).fill_nan(None).alias('totalamount_6A_totalamount_996A_ratio'),
 
 
                 # Durations: mean, max,min value of durations of closed contracts ('dateofcredend_353D','dateofcredstart_181D')
-                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().mean().fill_null(0.0).alias('dateofcredend_353D_dateofcredstart_181D_diff_mean'),
-                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().max().fill_null(0.0).alias('dateofcredend_353D_dateofcredstart_181D_diff_max'),
-                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_dateofcredstart_181D_diff_min'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().mean().alias('dateofcredend_353D_dateofcredstart_181D_diff_mean'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().max().alias('dateofcredend_353D_dateofcredstart_181D_diff_max'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofcredstart_181D")).dt.total_days().min().alias('dateofcredend_353D_dateofcredstart_181D_diff_min'),
 
                 # Durations: mean, max,min value of durations of active contracts ('dateofcredend_289D','dateofcredstart_739D')
-                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().mean().fill_null(0.0).alias('dateofcredend_289D_dateofcredstart_739D_diff_mean'),
-                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().max().fill_null(0.0).alias('dateofcredend_289D_dateofcredstart_739D_diff_max'),
-                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_dateofcredstart_739D_diff_min'),
-                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().std().fill_null(0.0).alias('dateofcredend_289D_dateofcredstart_739D_diff_std'),
+                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().mean().alias('dateofcredend_289D_dateofcredstart_739D_diff_mean'),
+                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().max().alias('dateofcredend_289D_dateofcredstart_739D_diff_max'),
+                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().min().alias('dateofcredend_289D_dateofcredstart_739D_diff_min'),
+                (pl.col("dateofcredend_289D") - pl.col("dateofcredstart_739D")).dt.total_days().std().alias('dateofcredend_289D_dateofcredstart_739D_diff_std'),
 
                 # Difference between dateofcredend_353D and dateofrealrepmt_138D
-                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().mean().fill_null(0.0).alias('dateofcredend_353D_dateofrealrepmt_138D_diff'),
-                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().max().fill_null(0.0).alias('dateofcredend_353D_dateofrealrepmt_138D_max'),
-                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_dateofrealrepmt_138D_min'),
-                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().std().fill_null(0.0).alias('dateofcredend_353D_dateofrealrepmt_138D_std'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().mean().alias('dateofcredend_353D_dateofrealrepmt_138D_diff'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().max().alias('dateofcredend_353D_dateofrealrepmt_138D_max'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().min().alias('dateofcredend_353D_dateofrealrepmt_138D_min'),
+                (pl.col("dateofcredend_353D") - pl.col("dateofrealrepmt_138D")).dt.total_days().std().alias('dateofcredend_353D_dateofrealrepmt_138D_std'),
 
                 # Last updates:
                 #pl.col('lastupdate_1112D').max().alias('lastupdate_1112D_max'),
@@ -1280,22 +1285,22 @@ class CreditRiskProcessing:
                 # Latest date with maximum number of overdue instl (numberofoverdueinstlmaxdat_148D) and (numberofoverdueinstlmaxdat_641D)
                 #pl.col('numberofoverdueinstlmaxdat_148D').max().alias('numberofoverdueinstlmaxdat_148D_max'),
                 #pl.col('numberofoverdueinstlmaxdat_641D').max().alias('numberofoverdueinstlmaxdat_641D_max'),
-                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_148D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_148D_diff'),
-                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_641D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_641D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_148D').max()).dt.total_days().alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_148D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('numberofoverdueinstlmaxdat_641D').max()).dt.total_days().alias('refreshdate_3813885D_numberofoverdueinstlmaxdat_641D_diff'),
 
                 # remaining time of max overdue installments date till contract end
-                (pl.col("dateofcredend_353D") - pl.col("numberofoverdueinstlmaxdat_148D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_numberofoverdueinstlmaxdat_148D_diff'),
-                (pl.col("dateofcredend_289D") - pl.col("numberofoverdueinstlmaxdat_641D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_numberofoverdueinstlmaxdat_641D_diff'),
+                (pl.col("dateofcredend_353D") - pl.col("numberofoverdueinstlmaxdat_148D")).dt.total_days().min().alias('dateofcredend_353D_numberofoverdueinstlmaxdat_148D_diff'),
+                (pl.col("dateofcredend_289D") - pl.col("numberofoverdueinstlmaxdat_641D")).dt.total_days().min().alias('dateofcredend_289D_numberofoverdueinstlmaxdat_641D_diff'),
 
                 # Latest date with maximal overdue amount (overdueamountmax2date_1002D) and (overdueamountmax2date_1142D)
                 #pl.col('overdueamountmax2date_1002D').max().alias('overdueamountmax2date_1002D_max'),
                 #pl.col('overdueamountmax2date_1142D').max().alias('overdueamountmax2date_1142D_max'),
-                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1002D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_overdueamountmax2date_1002D_diff'),
-                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1142D').max()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_overdueamountmax2date_1142D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1002D').max()).dt.total_days().alias('refreshdate_3813885D_overdueamountmax2date_1002D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('overdueamountmax2date_1142D').max()).dt.total_days().alias('refreshdate_3813885D_overdueamountmax2date_1142D_diff'),
                 
                 # remaining time of max overdue amount date till contract end
-                (pl.col("dateofcredend_353D") - pl.col("overdueamountmax2date_1002D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_overdueamountmax2date_1002D_diff'),
-                (pl.col("dateofcredend_289D") - pl.col("overdueamountmax2date_1142D")).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_overdueamountmax2date_1142D_diff'),
+                (pl.col("dateofcredend_353D") - pl.col("overdueamountmax2date_1002D")).dt.total_days().min().alias('dateofcredend_353D_overdueamountmax2date_1002D_diff'),
+                (pl.col("dateofcredend_289D") - pl.col("overdueamountmax2date_1142D")).dt.total_days().min().alias('dateofcredend_289D_overdueamountmax2date_1142D_diff'),
 
                 # Date
                 pl.col('overdueamountmax2date_1142D').max().alias('overdueamountmax2date_1142D_max'),
@@ -1311,8 +1316,8 @@ class CreditRiskProcessing:
                 #(pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1).max()).alias("overdueamountmaxdate_2T_365T_fromstr_last"),
 
                 # remaining time of max overdue amount date till contract end (from str version)
-                (pl.col("dateofcredend_353D") - pl.date(pl.col("overdueamountmaxdateyear_994T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_284T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_overdueamountmaxdate_994T_284T_diff'),
-                (pl.col("dateofcredend_289D") - pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_overdueamountmaxdate_2T_365T_diff'),
+                (pl.col("dateofcredend_353D") - pl.date(pl.col("overdueamountmaxdateyear_994T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_284T").cast(pl.Float64), 1)).dt.total_days().min().alias('dateofcredend_353D_overdueamountmaxdate_994T_284T_diff'),
+                (pl.col("dateofcredend_289D") - pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1)).dt.total_days().min().alias('dateofcredend_289D_overdueamountmaxdate_2T_365T_diff'),
                 # Assuming refreshdate_3813885D is current date, computing how much time ago this max overdue amount happend
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1)).dt.total_days().min().alias("overdueamountmaxdate_2T_365T_refreshed_last"),
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("overdueamountmaxdateyear_2T").cast(pl.Float64),pl.col("overdueamountmaxdatemonth_365T").cast(pl.Float64), 1)).dt.total_days().mean().alias("overdueamountmaxdate_2T_365T_refreshed_mean"),
@@ -1322,8 +1327,8 @@ class CreditRiskProcessing:
                 #(pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1).max()).alias("dpdmaxdate_596T_89T_fromstr_last"),
 
                  # remaining time of max dpd date till contract end (from str version)
-                (pl.col("dateofcredend_353D") - pl.date(pl.col("dpdmaxdateyear_896T").cast(pl.Float64),pl.col("dpdmaxdatemonth_442T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_353D_dpdmaxdate_896T_442T_diff'),
-                (pl.col("dateofcredend_289D") - pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1)).dt.total_days().min().fill_null(0.0).alias('dateofcredend_289D_dpdmaxdate_596T_89T_diff'),
+                (pl.col("dateofcredend_353D") - pl.date(pl.col("dpdmaxdateyear_896T").cast(pl.Float64),pl.col("dpdmaxdatemonth_442T").cast(pl.Float64), 1)).dt.total_days().min().alias('dateofcredend_353D_dpdmaxdate_896T_442T_diff'),
+                (pl.col("dateofcredend_289D") - pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1)).dt.total_days().min().alias('dateofcredend_289D_dpdmaxdate_596T_89T_diff'),
                 # Assuming refreshdate_3813885D is current date, computing how much time ago this max overdue amount happend
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1)).dt.total_days().min().alias("dpdmaxdateyear_596T_89T_refreshed_last"),
                 (pl.col('refreshdate_3813885D') - pl.date(pl.col("dpdmaxdateyear_596T").cast(pl.Float64),pl.col("dpdmaxdatemonth_89T").cast(pl.Float64), 1)).dt.total_days().mean().alias("dpdmaxdateyear_596T_89T_refreshed_mean"),
@@ -1333,9 +1338,9 @@ class CreditRiskProcessing:
                 pl.col('refreshdate_3813885D').max().alias('refreshdate_3813885D_max'),
                 #pl.col('refreshdate_3813885D').mean().alias('refreshdate_3813885D_mean'),
                 # difference between max and min values of refreshdate_3813885D in days
-                (pl.col('refreshdate_3813885D').max() - pl.col('refreshdate_3813885D').min()).dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_diff'),
+                (pl.col('refreshdate_3813885D').max() - pl.col('refreshdate_3813885D').min()).dt.total_days().alias('refreshdate_3813885D_diff'),
                 # standard deviation of refreshdate_3813885D in days
-                (pl.col('refreshdate_3813885D') - pl.col('refreshdate_3813885D').mean()).std().dt.total_days().fill_null(0.0).alias('refreshdate_3813885D_std'),
+                (pl.col('refreshdate_3813885D') - pl.col('refreshdate_3813885D').mean()).std().dt.total_days().alias('refreshdate_3813885D_std'),
 
 
 
@@ -1408,7 +1413,7 @@ class CreditRiskProcessing:
             data = data.group_by('case_id').agg(
 
                 # Select first non-null value of childnum_185L
-                pl.col('childnum_185L').first().cast(pl.Float64,strict=False).fill_null(0).cast(pl.Int16).alias('childnum_185L'),
+                pl.col('childnum_185L').first().cast(pl.Float64,strict=False).cast(pl.Int16).alias('childnum_185L'),
 
                 # Number of persons indicated in the application form
                 pl.when( pl.col('personindex_1023L').is_not_null() ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_personindex_1023L"),
@@ -1461,9 +1466,9 @@ class CreditRiskProcessing:
 
 
                 # # Encoded addresses (categorical)
-                pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_district_15M"),
-                pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("contaddr_zipcode_807M"),
-                pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).fill_null(0).alias("empladdr_zipcode_114M"),
+                pl.col("contaddr_district_15M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).alias("contaddr_district_15M"),
+                pl.col("contaddr_zipcode_807M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).alias("contaddr_zipcode_807M"),
+                pl.col("empladdr_zipcode_114M").first().str.replace(r'[^\d]', '').str.to_integer(strict=False).alias("empladdr_zipcode_114M"),
 
                 pl.col("contaddr_matchlist_1032L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_matchlist_1032L"),
                 pl.col("contaddr_smempladdr_334L").drop_nulls().first().cast(pl.Int16,strict=False).alias("contaddr_smempladdr_334L"),
@@ -1474,7 +1479,7 @@ class CreditRiskProcessing:
                 pl.col("empl_employedfrom_271D").drop_nulls().first().alias("empl_employedfrom_271D"),
 
                 # Main income amount (TODO: more features are possible)
-                pl.col("mainoccupationinc_384A").drop_nulls().first().fill_null(0.0).alias("mainoccupationinc_384A"),
+                pl.col("mainoccupationinc_384A").drop_nulls().first().alias("mainoccupationinc_384A"),
 
                 # Categorical with many categories (encoded by hand to integer) - registaddr_zipcode_184M ignored
                 pl.col("registaddr_district_1083M").first().alias("registaddr_district_1083M"),
@@ -1507,9 +1512,9 @@ class CreditRiskProcessing:
                 # Columns from person_2 table
 
                 # Number of non-null related person roles indicated
-                pl.col('relatedpersons_role_762T_encoded_max').sum().fill_null(0).alias('num_relatedpersons_role_762T_encoded_max'),
+                pl.col('relatedpersons_role_762T_encoded_max').sum().alias('num_relatedpersons_role_762T_encoded_max'),
                 # The most influential role (relatedpersons_role_762T_encoded)
-                pl.col('relatedpersons_role_762T_encoded_max').max().fill_null(0).alias('relatedpersons_role_762T_encoded_max'),
+                pl.col('relatedpersons_role_762T_encoded_max').max().alias('relatedpersons_role_762T_encoded_max'),
                 # Start date of employment
                 pl.col("empls_employedfrom_796D").drop_nulls().first().alias('empls_employedfrom_796D')
 
@@ -1549,83 +1554,83 @@ class CreditRiskProcessing:
                 # Create new features from summary columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in summary_columns],
+                        ).max().alias(col+"_max") for col in summary_columns],
                 
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in summary_columns],
+                        ).sum().alias(col+"_sum") for col in summary_columns],
 
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in summary_columns],
+                        ).mean().alias(col+"_mean") for col in summary_columns],
 
                 # Create mean values for columns in mean_columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).mean().fill_null(0.0).alias(col+"_mean") for col in mean_columns],
+                        ).mean().alias(col+"_mean") for col in mean_columns],
 
                 # Create std values for columns in std_columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).std().fill_null(0.0).alias(col+"_std") for col in std_columns],
+                        ).std().alias(col+"_std") for col in std_columns],
 
                 # Create columns with sum values from sum_columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).sum().fill_null(0.0).alias(col+"_sum") for col in sum_columns],
+                        ).sum().alias(col+"_sum") for col in sum_columns],
 
                 # Create columns with max values from max_columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).max().fill_null(0.0).alias(col+"_max") for col in max_columns],
+                        ).max().alias(col+"_max") for col in max_columns],
 
                 # Create columns with min values from min_columns
                 *[pl.col(col).cast(pl.Float64, strict=False).filter(
                         (pl.col(col).is_not_null()) & (pl.col(col).gt(0.0))
-                        ).min().fill_null(0.0).alias(col+"_min") for col in min_columns],
+                        ).min().alias(col+"_min") for col in min_columns],
 
                 # Late Payment Frequency: Count the number of instances where DPD exceeded a certain threshold (e.g., 30 days). A higher count suggests a riskier borrower.
                 pl.when( (pl.col('actualdpd_943P').is_not_null()) & (pl.col('actualdpd_943P').gt(30.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_late_actualdpd_943P"),
 
                 # Payment-to-Income Ratio: Calculate the ratio of the monthly annuity (annuity_853A) to the applicant’s income (byoccupationinc_3656910L). A higher ratio may indicate financial strain, affecting the ability to repay.
-                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("annuity_853A_byoccupationinc_3656910L_ratio_mean"),
-                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("annuity_853A_byoccupationinc_3656910L_ratio_max"),
+                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),None).mean().fill_nan(None).alias("annuity_853A_byoccupationinc_3656910L_ratio_mean"),
+                (pl.col("annuity_853A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),None).fill_nan(None).max().alias("annuity_853A_byoccupationinc_3656910L_ratio_max"),
 
                 # Payment-to-Income Ratio: Calculate the ratio of the monthly annuity (annuity_853A) to the applicant’s income (mainoccupationinc_437A). A higher ratio may indicate financial strain, affecting the ability to repay.
-                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("annuity_853A_mainoccupationinc_437A_ratio_mean"),
-                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("annuity_853A_mainoccupationinc_437A_ratio_max"),
+                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),None).mean().fill_nan(None).alias("annuity_853A_mainoccupationinc_437A_ratio_mean"),
+                (pl.col("annuity_853A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),None).fill_nan(None).max().alias("annuity_853A_mainoccupationinc_437A_ratio_max"),
 
                 pl.col("annuity_853A").drop_nulls().last().alias('annuity_853A_last'),
                 pl.col("pmtnum_8L").drop_nulls().last().alias('pmtnum_8L_last'),
                 
 
                 # childnum_21L
-                pl.col("childnum_21L").cast(pl.Int16, strict=False).max().fill_null(0).alias("childnum_21L_max"),
+                pl.col("childnum_21L").cast(pl.Int16, strict=False).max().alias("childnum_21L_max"),
 
                 # Credit Utilization Ratio: Calculate the ratio of the actual balance (credacc_actualbalance_314A) to the credit limit (credacc_credlmt_575A). A high ratio may indicate credit stress.
-                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_mean"),
-                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).max().fill_null(0.0).alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_max"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),None).fill_nan(None).mean().alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),None).fill_nan(None).max().alias("credacc_actualbalance_314A_credacc_credlmt_575A_ratio_max"),
 
                 # Balance-to-Income Ratio: Divide the actual balance (credacc_actualbalance_314A) by the applicant’s income (byoccupationinc_3656910L). A high ratio may signal financial strain.
-                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_mean"),
-                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_max"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),None).mean().fill_nan(None).alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("byoccupationinc_3656910L").cast(pl.Float64, strict=False).replace(1.0, None)).replace(float("inf"),None).fill_nan(None).max().alias("credacc_actualbalance_314A_byoccupationinc_3656910L_ratio_max"),
                 # Balance-to-Income Ratio: Divide the actual balance (credacc_actualbalance_314A) by the applicant’s income (mainoccupationinc_437A). A high ratio may signal financial strain.
-                (pl.col("credacc_actualbalance_314A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),0.0).mean().fill_nan(0.0).fill_null(0.0).alias("credacc_actualbalance_314A_mainoccupationinc_437A_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("mainoccupationinc_437A")).replace(float("inf"),None).mean().fill_nan(None).alias("credacc_actualbalance_314A_mainoccupationinc_437A_ratio_mean"),
 
                 # Check if 'mainoccupationinc_437A' increases or decreases by difference 'last - first'
                 pl.when( (pl.col('mainoccupationinc_437A').last() - pl.col('mainoccupationinc_437A').first())>0 ).then(1).otherwise(0).cast(pl.Int16).alias('mainoccupationinc_437A_increase'),
 
                 # Utilization Ratio: Divide the actual balance (credacc_actualbalance_314A) by the credit amount or card limit (credamount_590A). A high ratio suggests credit stress.
-                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("credacc_actualbalance_314A_credamount_590A_ratio_mean"),
-                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("credacc_actualbalance_314A_credamount_590A_ratio_max"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),None).fill_nan(None).mean().alias("credacc_actualbalance_314A_credamount_590A_ratio_mean"),
+                (pl.col("credacc_actualbalance_314A") / pl.col("credamount_590A")).replace(float("inf"),None).fill_nan(None).max().alias("credacc_actualbalance_314A_credamount_590A_ratio_max"),
 
                 # Credit Utilization Ratio: Divide the actual credit usage (e.g., outstanding debt) by the credit limit. 
-                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_mean"),
-                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_max"),
+                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),None).fill_nan(None).mean().alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_mean"),
+                (pl.col("outstandingdebt_522A") / pl.col("credacc_credlmt_575A")).replace(float("inf"),None).fill_nan(None).max().alias("outstandingdebt_522A_credacc_credlmt_575A_ratio_max"),
 
 
                 # 'approvaldate_319D' has pl.Date type. Compute difference between max and min dates in days
-                (pl.col('approvaldate_319D').max() - pl.col('approvaldate_319D').min()).dt.total_days().fill_null(0).mul(1.0/30).alias("approvaldate_319D_duration"),
+                (pl.col('approvaldate_319D').max() - pl.col('approvaldate_319D').min()).dt.total_days().mul(1.0/30).alias("approvaldate_319D_duration"),
                 # Last approval date
                 pl.col('approvaldate_319D').drop_nulls().last().alias('approvaldate_319D_last'),
                 # Last creation date
@@ -1643,7 +1648,7 @@ class CreditRiskProcessing:
                 pl.col('employedfrom_700D').min().alias('employedfrom_700D_first'),
 
                 # Averaged duration of credits
-                (pl.col('dtlastpmtallstes_3545839D') - pl.col('firstnonzeroinstldate_307D')).dt.total_days().mean().fill_null(0).mul(1.0/30).cast(pl.Float64, strict=False).alias('firstnonzeroinstldate_307D_dtlastpmtallstes_3545839D_diff'),
+                (pl.col('dtlastpmtallstes_3545839D') - pl.col('firstnonzeroinstldate_307D')).dt.total_days().mean().mul(1.0/30).cast(pl.Float64, strict=False).alias('firstnonzeroinstldate_307D_dtlastpmtallstes_3545839D_diff'),
                 pl.when(pl.col('dtlastpmtallstes_3545839D').is_not_null()).then(1).otherwise(0).sum().cast(pl.Int64).alias("num_dtlastpmtallstes_3545839D"),
                 
                 # Boolean columns isbidproduct_390L and isdebitcard_527L: count true's
@@ -1689,16 +1694,16 @@ class CreditRiskProcessing:
                 pl.when( (pl.col('last180dayaveragebalance_704A').is_not_null()) & (pl.col('last180dayaveragebalance_704A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_last180dayaveragebalance_704A"),
 
                 # Balance-to-Turnover Ratio:  Create a new feature by dividing last180dayaveragebalance_704A by last180dayturnover_1134A.         * A higher ratio might indicate better financial management and lower default risk.
-                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_max"),
-                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_mean"),
+                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),None).fill_nan(None).max().alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_max"),
+                (pl.col("last180dayaveragebalance_704A") / pl.col("last180dayturnover_1134A")).replace(float("inf"),None).fill_nan(None).mean().alias("last180dayaveragebalance_704A_last180dayturnover_1134A_ratio_mean"),
 
-                pl.col("last180dayaveragebalance_704A").sum().fill_null(0.0).alias("last180dayaveragebalance_704A_sum"),
-                pl.col("last180dayturnover_1134A").sum().fill_null(0.0).alias("last180dayturnover_1134A_sum"),
-                pl.col("last30dayturnover_651A").sum().fill_null(0.0).alias("last30dayturnover_651A_sum"),
+                pl.col("last180dayaveragebalance_704A").sum().alias("last180dayaveragebalance_704A_sum"),
+                pl.col("last180dayturnover_1134A").sum().alias("last180dayturnover_1134A_sum"),
+                pl.col("last30dayturnover_651A").sum().alias("last30dayturnover_651A_sum"),
 
                 # Recent Turnover Change: Calculate the percentage change in turnover between the last 30 days and the previous 30 days
-                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).max().alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_max'),
-                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),0.0).fill_nan(0.0).mean().fill_null(0.0).alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_mean'),
+                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),None).fill_nan(None).max().alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_max'),
+                (pl.col('last30dayturnover_651A').mul(6.0) / pl.col('last180dayturnover_1134A')).replace(float("inf"),None).fill_nan(None).mean().alias('last30dayturnover_651A_last180dayturnover_1134A_ratio_mean'),
 
                 #  Account Age: Calculate the duration (in days) since the debit card was opened.
                 pl.col('openingdate_857D').max().alias('openingdate_857D_last'),
@@ -1719,7 +1724,7 @@ class CreditRiskProcessing:
                 pl.when( (pl.col('contractenddate_991D').is_not_null()) & (pl.col('amount_416A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_open_nonzero_deposits_416A"),
 
                 # Deposit amount
-                pl.col('amount_416A').sum().fill_null(0.0).alias('amount_416A_sum'),
+                pl.col('amount_416A').sum().alias('amount_416A_sum'),
                 # Sum of deposits on still open accounts
                 pl.when( pl.col('contractenddate_991D').is_not_null() ).then(pl.col('amount_416A')).otherwise(0.0).sum().cast(pl.Float64).alias("amount_416A_stillopen_sum"),
 
@@ -1740,10 +1745,10 @@ class CreditRiskProcessing:
 
                 # Number of Tax amount records
                 pl.when( (pl.col('amount_4527230A').is_not_null()) & (pl.col('amount_4527230A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_4527230A"),
-                pl.col('amount_4527230A').sum().fill_null(0.0).alias('amount_4527230A_sum'),
-                pl.col('amount_4527230A').mean().fill_null(0.0).alias('amount_4527230A_mean'),
+                pl.col('amount_4527230A').sum().alias('amount_4527230A_sum'),
+                pl.col('amount_4527230A').mean().alias('amount_4527230A_mean'),
                 # tax grows?
-                (pl.col("amount_4527230A").first() / pl.col("amount_4527230A").last()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amount_4527230A_first_last_ratio"),
+                (pl.col("amount_4527230A").first() / pl.col("amount_4527230A").last()).replace(float("inf"),None).fill_nan(None).alias("amount_4527230A_first_last_ratio"),
 
             )
             # Ignore: name_4527232M
@@ -1756,11 +1761,11 @@ class CreditRiskProcessing:
 
                 # Number of Tax amount records
                 pl.when( (pl.col('amount_4917619A').is_not_null()) & (pl.col('amount_4917619A').gt(0.0)) ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_amount_4917619A"),
-                pl.col('amount_4917619A').sum().fill_null(0.0).alias('amount_4917619A_sum'),
-                pl.col('amount_4917619A').mean().fill_null(0.0).alias('amount_4917619A_mean'),
+                pl.col('amount_4917619A').sum().alias('amount_4917619A_sum'),
+                pl.col('amount_4917619A').mean().alias('amount_4917619A_mean'),
 
                 # Duration in days (TODO: drop?)
-                ( pl.col('deductiondate_4917603D').max() - pl.col('deductiondate_4917603D').min()).dt.total_days().fill_null(0).alias('deductiondate_4917603D_duration'),
+                ( pl.col('deductiondate_4917603D').max() - pl.col('deductiondate_4917603D').min()).dt.total_days().alias('deductiondate_4917603D_duration'),
 
             )
             # Ignore: name_4917606M
@@ -1778,7 +1783,7 @@ class CreditRiskProcessing:
                 pl.col('pmtamount_36A').max().alias('pmtamount_36A_max'),
 
                 # Duration in days (TODO: drop?)
-                ( pl.col('processingdate_168D').max() - pl.col('processingdate_168D').min()).dt.total_days().fill_null(0).alias('processingdate_168D_duration'),
+                ( pl.col('processingdate_168D').max() - pl.col('processingdate_168D').min()).dt.total_days().alias('processingdate_168D_duration'),
 
             )
             # Ignore; employername_160M
@@ -1786,19 +1791,19 @@ class CreditRiskProcessing:
         if table_name=='other_1':
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
-                pl.col('amtdebitincoming_4809443A').sum().fill_null(0.0).alias('amtdebitincoming_4809443A'),
-                pl.col('amtdebitoutgoing_4809440A').sum().fill_null(0.0).alias('amtdebitoutgoing_4809440A'),
+                pl.col('amtdebitincoming_4809443A').sum().alias('amtdebitincoming_4809443A'),
+                pl.col('amtdebitoutgoing_4809440A').sum().alias('amtdebitoutgoing_4809440A'),
 
-                pl.col('amtdepositbalance_4809441A').sum().fill_null(0.0).alias('amtdepositbalance_4809441A'),
-                pl.col('amtdepositincoming_4809444A').sum().fill_null(0.0).alias('amtdepositincoming_4809444A'),
-                pl.col('amtdepositoutgoing_4809442A').sum().fill_null(0.0).alias('amtdepositoutgoing_4809442A'),
+                pl.col('amtdepositbalance_4809441A').sum().alias('amtdepositbalance_4809441A'),
+                pl.col('amtdepositincoming_4809444A').sum().alias('amtdepositincoming_4809444A'),
+                pl.col('amtdepositoutgoing_4809442A').sum().alias('amtdepositoutgoing_4809442A'),
 
                 # Transaction Behavior Ratios: Create ratios between incoming and outgoing transactions (e.g., incoming / outgoing). Higher ratios could indicate better financial management.
-                (pl.col("amtdebitincoming_4809443A").sum() / pl.col("amtdebitoutgoing_4809440A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdebitincoming_4809443A_amtdebitoutgoing_4809440A_ratio"),
-                (pl.col("amtdepositincoming_4809444A").sum() / pl.col("amtdepositoutgoing_4809442A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdepositincoming_4809444A_amtdepositoutgoing_4809442A_ratio"),
+                (pl.col("amtdebitincoming_4809443A").sum() / pl.col("amtdebitoutgoing_4809440A").sum()).replace(float("inf"),None).fill_nan(None).alias("amtdebitincoming_4809443A_amtdebitoutgoing_4809440A_ratio"),
+                (pl.col("amtdepositincoming_4809444A").sum() / pl.col("amtdepositoutgoing_4809442A").sum()).replace(float("inf"),None).fill_nan(None).alias("amtdepositincoming_4809444A_amtdepositoutgoing_4809442A_ratio"),
 
                 # Multiply or divide relevant columns (e.g., balance × incoming deposits).
-                (pl.col("amtdepositbalance_4809441A").sum() / pl.col("amtdebitincoming_4809443A").sum()).replace(float("inf"),0.0).fill_nan(0.0).fill_null(0.0).alias("amtdepositbalance_4809441A_amtdebitincoming_4809443A_ratio"),
+                (pl.col("amtdepositbalance_4809441A").sum() / pl.col("amtdebitincoming_4809443A").sum()).replace(float("inf"),None).fill_nan(None).alias("amtdepositbalance_4809441A_amtdebitincoming_4809443A_ratio"),
 
             )
 
@@ -1811,14 +1816,12 @@ class CreditRiskProcessing:
         - return: DataFrame with date features added
         """
         data = data.with_columns(                
-                *[ (pl.col(ref_date) - pl.col(col)).dt.total_days().fill_null(0.0).alias(col) for col in date_cols ],
+                *[ (pl.col(ref_date) - pl.col(col)).dt.total_days().alias(col) for col in date_cols ],
         ).with_columns(
             # Convert 'date_decision' to day of week
             pl.col(ref_date).dt.weekday().cast(pl.Int8, strict=False).alias('date_decision_weekday'),
             # Convert 'date_decision' to month
             pl.col(ref_date).dt.month().cast(pl.Int8, strict=False).alias('date_decision_month'),
-            # Convert 'date_decision' to year
-            #pl.col(ref_date).dt.year().cast(pl.Int16, strict=False).alias('date_decision_year'),
             # Convert 'date_decision' to quarter
             pl.col(ref_date).dt.quarter().cast(pl.Int8, strict=False).alias('date_decision_quarter'),
             # Convert 'date_decision' to week of year
@@ -2207,14 +2210,15 @@ class CreditRiskProcessing:
            query_base = query_base.filter(~pl.all_horizontal(pl.col(*cols_pred).is_null()))
 
         # Fill all null values and NaN values with 0
-        query_base = query_base.fill_nan(0)   # .fill_null(0)   .with_columns(cs.numeric().replace(float("inf"),0.0))
+        query_base = query_base.fill_nan(None)   # .fill_null(0)   .with_columns(cs.numeric().replace(float("inf"),0.0))
 
         # Drop these categorical features. Drop columns that were in the tail of LGBM's feature importance
         drop_cat_cols = ['previouscontdistrict_112M_encoded', 'contaddr_zipcode_807M_encoded_mode', 'contaddr_zipcode_807M_encoded_last',
                          'contaddr_district_15M_encoded_last', 'contaddr_district_15M_encoded_mode', 'contaddr_district_15M_mean_target',
                          'previouscontdistrict_112M_mean_target', 'contaddr_zipcode_807M_mean_target',
                          'empladdr_district_926M_encoded_last','empladdr_district_926M_encoded_mode','empladdr_zipcode_114M_encoded_mode','empladdr_zipcode_114M_encoded_last']
-        query_base = query_base.drop(drop_cat_cols) #.drop(predata.drop_cols_by_importance)
+        singleval_cols = ['amount_1115A_credlmt_3940954A_ratio_max', 'amount_1115A_credlmt_1052A_ratio_max', 'residualamount_488A_std', 'persontype_1.0_792L', 'deferredmnthsnum_166L']
+        query_base = query_base.drop(drop_cat_cols+singleval_cols) #.drop(predata.drop_cols_by_importance)
 
         # Drop the columns in query_base that end with "_mean_target"
         query_base = query_base.drop([col for col in query_base.columns if col.endswith('_mean_target')])
