@@ -725,7 +725,6 @@ class CreditRiskProcessing:
         if table_name=='person_2':
             # Encode categorical columns
             #data = self.encode_categorical_columns(data, table_name)
-
             
             data = data.group_by(['case_id','num_group1']).agg(
                     # Number of non-null related person roles indicated
@@ -742,134 +741,156 @@ class CreditRiskProcessing:
                     *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded")],
                     *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded")],
 
+
                 )
             
         elif table_name=='applprev_2':
             # Encode categorical columns
             #data = self.encode_categorical_columns(data, table_name)
 
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_group2', '_id']
+
             data = data.group_by(['case_id','num_group1']).agg(
-                    # Number of non-null contact roles indicated
-                    pl.when(pl.col("conts_type_509L_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_conts_type_509L_encoded"),
-                    # The most influential contact
-                    pl.col("conts_type_509L_encoded").drop_nulls().max().alias("conts_type_509L_encoded_max"),
+                # Number of non-null contact roles indicated
+                pl.when(pl.col("conts_type_509L_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_conts_type_509L_encoded"),
+                # The most influential contact
+                pl.col("conts_type_509L_encoded").drop_nulls().max().alias("conts_type_509L_encoded_max"),
 
-                    # Number of non-null credacc_cards_status
-                    # TODO: check .replace("a55475b1", None) addition
-                    pl.when(pl.col("credacc_cards_status_52L_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_credacc_cards_status_52L_encoded"),
-                    # The most influential credacc_cards_status
-                    pl.col("credacc_cards_status_52L_encoded").max().alias("credacc_cards_status_52L_encoded_max"),
+                # Number of non-null credacc_cards_status
+                # TODO: check .replace("a55475b1", None) addition
+                pl.when(pl.col("credacc_cards_status_52L_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_credacc_cards_status_52L_encoded"),
+                # The most influential credacc_cards_status
+                pl.col("credacc_cards_status_52L_encoded").max().alias("credacc_cards_status_52L_encoded_max"),
 
-                    # Number of credit card blocks
-                    # TODO: check .replace("a55475b1", None) addition
-                    pl.when(pl.col("cacccardblochreas_147M_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_cacccardblochreas_147M_encoded"),
-                    # The most influential credit card block
-                    pl.col("cacccardblochreas_147M_encoded").max().alias("cacccardblochreas_147M_encoded_max"),
+                # Number of credit card blocks
+                # TODO: check .replace("a55475b1", None) addition
+                pl.when(pl.col("cacccardblochreas_147M_encoded").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_cacccardblochreas_147M_encoded"),
+                # The most influential credit card block
+                pl.col("cacccardblochreas_147M_encoded").max().alias("cacccardblochreas_147M_encoded_max"),
 
-                    # Various mean_target columns
-                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
-                    # Various frequency columns
-                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
-                    # Various ordinal encoded columns
-                    *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded")],
-                    *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded")],
-                )
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+                # Various ordinal encoded columns
+                *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded")],
+                *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded")],
+
+                # Pick last three values of groupby and compute mean for all numerical columns
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                
+            )
             
         elif table_name=='credit_bureau_a_2':
             # Encode categorical columns
             #data = self.encode_categorical_columns(data, table_name)
 
             collater_typofvalofguarant_unique = ['9a0c095e','8fd95e4b','06fb9ba8','3cbe86ba']
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_group2', '_id']
 
             data = data.group_by(['case_id', 'num_group1']).agg(
-                    # Number of non-null collater_typofvalofguarant_298M
-                    pl.when(pl.col("collater_typofvalofguarant_298M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_298M"),
-                    # Sum of one-hot-encoded columns
-                    #*[pl.col(f"collater_typofvalofguarant_298M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
+                # Number of non-null collater_typofvalofguarant_298M
+                pl.when(pl.col("collater_typofvalofguarant_298M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_298M"),
+                # Sum of one-hot-encoded columns
+                #*[pl.col(f"collater_typofvalofguarant_298M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
 
-                    # Number of non-null collater_typofvalofguarant_407M
-                    pl.when(pl.col("collater_typofvalofguarant_407M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_407M"),
-                    # Sum of one-hot-encoded columns
-                    #*[pl.col(f"collater_typofvalofguarant_407M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
+                # Number of non-null collater_typofvalofguarant_407M
+                pl.when(pl.col("collater_typofvalofguarant_407M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_typofvalofguarant_407M"),
+                # Sum of one-hot-encoded columns
+                #*[pl.col(f"collater_typofvalofguarant_407M_{role}").sum().cast(pl.Int16).alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
 
-                    # Number of non-null collater_valueofguarantee_1124L
-                    pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_1124L"),
-                    # Total sum and mean of collater_valueofguarantee_1124L
-                    pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).sum().alias("collater_valueofguarantee_1124L_sum"),
-                    pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).mean().alias("collater_valueofguarantee_1124L_mean"),
+                # Number of non-null collater_valueofguarantee_1124L
+                pl.when(pl.col("collater_valueofguarantee_1124L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_1124L"),
+                # Total sum and mean of collater_valueofguarantee_1124L
+                pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).sum().alias("collater_valueofguarantee_1124L_sum"),
+                pl.col("collater_valueofguarantee_1124L").cast(pl.Float64).mean().alias("collater_valueofguarantee_1124L_mean"),
 
-                    # Number of non-null collater_valueofguarantee_876L
-                    pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_876L"),
-                    # Total sum and mean of collater_valueofguarantee_876L
-                    pl.col("collater_valueofguarantee_876L").cast(pl.Float64).sum().alias("collater_valueofguarantee_876L_sum"),
-                    pl.col("collater_valueofguarantee_876L").cast(pl.Float64).mean().alias("collater_valueofguarantee_876L_mean"),
+                # Number of non-null collater_valueofguarantee_876L
+                pl.when(pl.col("collater_valueofguarantee_876L").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collater_valueofguarantee_876L"),
+                # Total sum and mean of collater_valueofguarantee_876L
+                pl.col("collater_valueofguarantee_876L").cast(pl.Float64).sum().alias("collater_valueofguarantee_876L_sum"),
+                pl.col("collater_valueofguarantee_876L").cast(pl.Float64).mean().alias("collater_valueofguarantee_876L_mean"),
 
-                    # Number of non-null collaterals_typeofguarante_359M
-                    pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_359M"),
-                    # Number of non-null collaterals_typeofguarante_669M
-                    pl.when(pl.col("collaterals_typeofguarante_669M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_669M"),
+                # Number of non-null collaterals_typeofguarante_359M
+                pl.when(pl.col("collaterals_typeofguarante_359M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_359M"),
+                # Number of non-null collaterals_typeofguarante_669M
+                pl.when(pl.col("collaterals_typeofguarante_669M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_collaterals_typeofguarante_669M"),
 
-                    # Days past due of the payment columns (pmts_dpd_1073P)
-                    pl.when(
+                # Days past due of the payment columns (pmts_dpd_1073P)
+                pl.when(
                             (pl.col("pmts_dpd_1073P").is_not_null()) & (pl.col("pmts_dpd_1073P").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_1073P"),
-                    pl.col("pmts_dpd_1073P").sum().alias("pmts_dpd_1073P_sum"),
-                    pl.col("pmts_dpd_1073P").mean().alias("pmts_dpd_1073P_mean"),
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_1073P"),
+                pl.col("pmts_dpd_1073P").sum().alias("pmts_dpd_1073P_sum"),
+                pl.col("pmts_dpd_1073P").mean().alias("pmts_dpd_1073P_mean"),
 
-                    # Days past due of the payment columns (pmts_dpd_303P)
-                    pl.when(
+                # Days past due of the payment columns (pmts_dpd_303P)
+                pl.when(
                             (pl.col("pmts_dpd_303P").is_not_null()) & (pl.col("pmts_dpd_303P").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_303P"),
-                    pl.col("pmts_dpd_303P").sum().alias("pmts_dpd_303P_sum"),
-                    pl.col("pmts_dpd_303P").mean().alias("pmts_dpd_303P_mean"),
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_dpd_303P"),
+                pl.col("pmts_dpd_303P").sum().alias("pmts_dpd_303P_sum"),
+                pl.col("pmts_dpd_303P").mean().alias("pmts_dpd_303P_mean"),
 
-                    # Overdue payment
-                    pl.when(
+                # Overdue payment
+                pl.when(
                             (pl.col("pmts_overdue_1140A").is_not_null()) & (pl.col("pmts_overdue_1140A").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1140A"),
-                    pl.col("pmts_overdue_1140A").sum().alias("pmts_overdue_1140A_sum"),
-                    pl.col("pmts_overdue_1140A").mean().alias("pmts_overdue_1140A_mean"),
-                    pl.col("pmts_overdue_1140A").filter(
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1140A"),
+                pl.col("pmts_overdue_1140A").sum().alias("pmts_overdue_1140A_sum"),
+                pl.col("pmts_overdue_1140A").mean().alias("pmts_overdue_1140A_mean"),
+                pl.col("pmts_overdue_1140A").filter(
                             (pl.col("pmts_overdue_1140A").is_not_null()) & (pl.col("pmts_overdue_1140A").gt(0.0))
-                        ).last().alias("pmts_overdue_1140A_last"),
+                    ).last().alias("pmts_overdue_1140A_last"),
 
-                    pl.when(
+                pl.when(
                             (pl.col("pmts_overdue_1152A").is_not_null()) & (pl.col("pmts_overdue_1152A").gt(0.0))
-                        ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1152A"),
-                    pl.col("pmts_overdue_1152A").sum().alias("pmts_overdue_1152A_sum"),
-                    pl.col("pmts_overdue_1152A").mean().alias("pmts_overdue_1152A_mean"),
-                    pl.col("pmts_overdue_1152A").filter(
+                    ).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_overdue_1152A"),
+                pl.col("pmts_overdue_1152A").sum().alias("pmts_overdue_1152A_sum"),
+                pl.col("pmts_overdue_1152A").mean().alias("pmts_overdue_1152A_mean"),
+                pl.col("pmts_overdue_1152A").filter(
                             (pl.col("pmts_overdue_1152A").is_not_null()) & (pl.col("pmts_overdue_1152A").gt(0.0))
-                        ).last().alias("pmts_overdue_1152A_last"),
+                    ).last().alias("pmts_overdue_1152A_last"),
 
-                    # Number of non-null subjectroles_name_541M
-                    pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_subjectroles_name_541M"),
+                # Number of non-null subjectroles_name_541M
+                pl.when(pl.col("subjectroles_name_541M").replace("a55475b1", None).is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_subjectroles_name_541M"),
 
-                    # Years of payments of closed credit (pmts_year_507T) contract and the current contract (pmts_year_1139T)
-                    # Number of non-null pmts_year_507T
-                    pl.when(pl.col("pmts_year_507T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_507T"),
-                    # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
-                    pl.col("pmts_year_507T").cast(pl.Float64).min().alias("pmts_year_507T_first"),
-                    pl.col("pmts_year_507T").cast(pl.Float64).max().alias("pmts_year_507T_last"),
-                    (pl.col("pmts_year_507T").cast(pl.Float64).max() - pl.col("pmts_year_507T").cast(pl.Float64).min()).alias("pmts_year_507T_duration"),
-                    # Number of non-null pmts_year_507T
-                    pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_1139T"),
-                    # First and last years of payments of the current credit (pmts_year_1139T) contract, avoiding null, and their difference
-                    pl.col("pmts_year_1139T").cast(pl.Float64).min().alias("pmts_year_1139T_first"),
-                    pl.col("pmts_year_1139T").cast(pl.Float64).max().alias("pmts_year_1139T_last"),
-                    (pl.col("pmts_year_1139T").cast(pl.Float64).max() - pl.col("pmts_year_1139T").cast(pl.Float64).min()).alias("pmts_year_1139T_duration"),
+                # Years of payments of closed credit (pmts_year_507T) contract and the current contract (pmts_year_1139T)
+                # Number of non-null pmts_year_507T
+                pl.when(pl.col("pmts_year_507T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_507T"),
+                # First and last years of payments of closed credit (pmts_year_507T) contract, avoiding null, and their difference
+                pl.col("pmts_year_507T").cast(pl.Float64).min().alias("pmts_year_507T_first"),
+                pl.col("pmts_year_507T").cast(pl.Float64).max().alias("pmts_year_507T_last"),
+                (pl.col("pmts_year_507T").cast(pl.Float64).max() - pl.col("pmts_year_507T").cast(pl.Float64).min()).alias("pmts_year_507T_duration"),
+                # Number of non-null pmts_year_507T
+                pl.when(pl.col("pmts_year_1139T").is_not_null()).then(1).otherwise(0).sum().cast(pl.Int16).alias("num_pmts_year_1139T"),
+                # First and last years of payments of the current credit (pmts_year_1139T) contract, avoiding null, and their difference
+                pl.col("pmts_year_1139T").cast(pl.Float64).min().alias("pmts_year_1139T_first"),
+                pl.col("pmts_year_1139T").cast(pl.Float64).max().alias("pmts_year_1139T_last"),
+                (pl.col("pmts_year_1139T").cast(pl.Float64).max() - pl.col("pmts_year_1139T").cast(pl.Float64).min()).alias("pmts_year_1139T_duration"),
 
-                    # Number of years without credit
-                    (pl.col("pmts_year_1139T").cast(pl.Float64).min() - pl.col("pmts_year_507T").cast(pl.Float64).max()).alias("pmts_year_1139T_507T_diff"),
+                # Number of years without credit
+                (pl.col("pmts_year_1139T").cast(pl.Float64).min() - pl.col("pmts_year_507T").cast(pl.Float64).max()).alias("pmts_year_1139T_507T_diff"),
 
-                    # Various mean_target columns
-                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
-                    # Various frequency columns
-                    *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
-                    # Various ordinal encoded columns
-                    *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded")],
-                    *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded")],
+                # Various mean_target columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_mean_target")],
+                # Various frequency columns
+                *[pl.col(col).mean().alias(col) for col in data.columns if col.endswith("_frequency")],
+                # Various ordinal encoded columns
+                *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded")],
+                *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded")],
 
+                # Pick last three values of groupby and compute mean for all numerical columns
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
             # Dropped completely: pmts_month_158T, pmts_month_706T
@@ -878,6 +899,7 @@ class CreditRiskProcessing:
         elif table_name=='credit_bureau_b_2':
             # Fill null for pmts_dpdvalue_108P (observed)
             #data = self.encode_categorical_columns(data, table_name)
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_group2', '_id']
 
             data = data.group_by(['case_id', 'num_group1']).agg(
                 # Number of non-null pmts_date_1107D (it has type pl.Date)
@@ -909,7 +931,14 @@ class CreditRiskProcessing:
                     ).arg_max().alias("pmts_pmtsoverdue_635A_maxidx"),
                 ((pl.col("pmts_pmtsoverdue_635A").max() - pl.col("pmts_pmtsoverdue_635A").last())/pl.col("pmts_pmtsoverdue_635A").max()).fill_nan(1.0).alias("pmts_pmtsoverdue_635A_pos"),
         
+                # Pick last three values of groupby and compute mean for all numerical columns
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
 
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         return data
@@ -921,6 +950,7 @@ class CreditRiskProcessing:
         if table_name=='credit_bureau_b_1':
             # Encoding categorical columns
             #data = self.encode_categorical_columns(data, table_name)
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
 
             # Columns to comute Summary Statistics (max, sum, mean, median)
             summary_columns = ['amount_1115A', 'totalamount_503A', 'totalamount_881A', 'overdueamountmax_950A',
@@ -1081,6 +1111,14 @@ class CreditRiskProcessing:
                 pl.col("pmts_date_1107D_first").min().alias("pmts_date_1107D_first"),
                 pl.col("pmts_date_1107D_last").max().alias("pmts_date_1107D_last"),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         if table_name=='credit_bureau_a_1':
@@ -1091,6 +1129,8 @@ class CreditRiskProcessing:
             #    2) borrower credit score, 
             #    3) loan purpose (purposeofcred_426M,purposeofcred_722M,purposeofcred_874M).
             #   This way, you can analyze how interest rates vary across different segments.
+
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
 
 
             # Columns to comute Summary Statistics (max, sum, mean, median)
@@ -1394,6 +1434,14 @@ class CreditRiskProcessing:
                 #*[pl.col(f"collater_typofvalofguarant_{role}_298M").sum().alias(f"collater_typofvalofguarant_{role}_298M") for role in collater_typofvalofguarant_unique],
                 #*[pl.col(f"collater_typofvalofguarant_{role}_407M").sum().alias(f"collater_typofvalofguarant_{role}_407M") for role in collater_typofvalofguarant_unique],
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         if table_name=='person_1':
@@ -1540,6 +1588,8 @@ class CreditRiskProcessing:
             std_columns = []
             number_non0s_column = ['actualdpd_943P','annuity_853A','downpmt_134A']
 
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
+
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
 
@@ -1684,10 +1734,21 @@ class CreditRiskProcessing:
                 *[pl.col(col).drop_nulls().last().alias(f"{col}_last") for col in data.columns if col.endswith("_encoded_mode")],
                 *[pl.col(col).drop_nulls().mode().first().alias(f"{col}_mode") for col in data.columns if col.endswith("_encoded_mode")],
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
             # Ignore: district_544M, profession_152M
 
         if table_name=='debitcard_1':
+
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
+
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Number of cards?
@@ -1709,9 +1770,19 @@ class CreditRiskProcessing:
                 pl.col('openingdate_857D').max().alias('openingdate_857D_last'),
                 pl.col('openingdate_857D').min().alias('openingdate_857D_first'),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         if table_name=='deposit_1':
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
+
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Number of non-zero deposit accounts
@@ -1734,10 +1805,19 @@ class CreditRiskProcessing:
 
                 # Averaged duration of deposit accounts (that were closed) in years
                 (pl.col('contractenddate_991D') - pl.col('openingdate_313D')).dt.total_days().mean().mul(1.0/365).alias('contractenddate_991D_openingdate_313D_duration'),
+                
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
 
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         if table_name=='tax_registry_a_1':
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Tax record date (TODO: new date reference?)
@@ -1750,10 +1830,19 @@ class CreditRiskProcessing:
                 # tax grows?
                 (pl.col("amount_4527230A").first() / pl.col("amount_4527230A").last()).replace(float("inf"),None).fill_nan(None).alias("amount_4527230A_first_last_ratio"),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
             # Ignore: name_4527232M
 
         if table_name=='tax_registry_b_1':
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Tax record date (TODO: new date reference?)
@@ -1767,10 +1856,20 @@ class CreditRiskProcessing:
                 # Duration in days (TODO: drop?)
                 ( pl.col('deductiondate_4917603D').max() - pl.col('deductiondate_4917603D').min()).dt.total_days().alias('deductiondate_4917603D_duration'),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
             )
             # Ignore: name_4917606M
 
         if table_name=='tax_registry_c_1':
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 # Tax record date (TODO: new date reference?)
@@ -1785,10 +1884,19 @@ class CreditRiskProcessing:
                 # Duration in days (TODO: drop?)
                 ( pl.col('processingdate_168D').max() - pl.col('processingdate_168D').min()).dt.total_days().alias('processingdate_168D_duration'),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
             # Ignore; employername_160M
 
         if table_name=='other_1':
+            suffixes = ['_mean_target','_frequency','_encoded','_group1', '_id', '_encoded_last','_encoded_mode']
             # Aggregating by case_id
             data = data.group_by('case_id').agg(
                 pl.col('amtdebitincoming_4809443A').sum().alias('amtdebitincoming_4809443A'),
@@ -1805,6 +1913,14 @@ class CreditRiskProcessing:
                 # Multiply or divide relevant columns (e.g., balance × incoming deposits).
                 (pl.col("amtdepositbalance_4809441A").sum() / pl.col("amtdebitincoming_4809443A").sum()).replace(float("inf"),None).fill_nan(None).alias("amtdepositbalance_4809441A_amtdebitincoming_4809443A_ratio"),
 
+                # Last 3 rows
+                *[pl.col(col).drop_nulls().tail(3).mean().alias(f"{col}_tail_mean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                #*[pl.col(col).drop_nulls().tail(3).max().alias(f"{col}_tail_max") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+
+                # Diffs
+                *[pl.col(col).drop_nulls().diff().mean().alias(f"{col}_diffmean") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").std().alias(f"{col}_diffstd") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
+                *[pl.col(col).drop_nulls().diff(null_behavior="drop").last().alias(f"{col}_difflast") for col in data.select(cs.numeric()).columns if not any(col.endswith(suffix) for suffix in suffixes)],
             )
 
         return data
@@ -1851,14 +1967,6 @@ class CreditRiskProcessing:
                      'applprev_1', 'other_1', 'tax_registry_a_1', 'tax_registry_b_1', 'tax_registry_c_1', 'credit_bureau_a_1',
                      'credit_bureau_b_1', 'deposit_1', 'person_1', 'debitcard_1',
                      'applprev_2', 'person_2', 'credit_bureau_a_2', 'credit_bureau_b_2']
-        
-        # Relations between data tables for concatination of depth 1 and 2 after aggregation of depth 2
-        data_relations_by_depth = {
-            'applprev_1': 'applprev_2',
-            'person_1': 'person_2',
-            'credit_bureau_a_1': 'credit_bureau_a_2',
-            'credit_bureau_b_1': 'credit_bureau_b_2'
-        }
 
 
         howtojoin = 'left' if self.data_type=='test' else 'inner'
@@ -2219,6 +2327,10 @@ class CreditRiskProcessing:
                          'empladdr_district_926M_encoded_last','empladdr_district_926M_encoded_mode','empladdr_zipcode_114M_encoded_mode','empladdr_zipcode_114M_encoded_last']
         singleval_cols = ['amount_1115A_credlmt_3940954A_ratio_max', 'amount_1115A_credlmt_1052A_ratio_max', 'residualamount_488A_std', 'persontype_1.0_792L', 'deferredmnthsnum_166L']
         query_base = query_base.drop(drop_cat_cols+singleval_cols) #.drop(predata.drop_cols_by_importance)
+
+        for col in query_base.columns:
+            if col in predata.drop_cols_by_importance:
+                query_base = query_base.drop(col)
 
         # Drop the columns in query_base that end with "_mean_target"
         query_base = query_base.drop([col for col in query_base.columns if col.endswith('_mean_target')])
